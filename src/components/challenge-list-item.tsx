@@ -89,10 +89,96 @@ export function ChallengeListItem({
 
   return (
     <Link href={`/challenges/${id}`} className="block group">
-      <div className="relative bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden hover:border-amber-500/40 hover:bg-slate-900/80 transition-all duration-300">
+      {/* Mobile Card View */}
+      <div className="md:hidden bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden hover:border-amber-500/40 hover:bg-slate-900/80 transition-all duration-300">
+        {/* Image */}
+        {imageUrl ? (
+          <div className="relative h-36 overflow-hidden">
+            <img
+              src={imageUrl}
+              alt={title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
+            {/* Status badges on image */}
+            <div className="absolute top-3 left-3 flex items-center gap-2">
+              <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusColors.bg} ${statusColors.text}`}>
+                {isActive ? "Active" : isUpcoming ? "Upcoming" : "Ended"}
+              </span>
+              {isOneTime && (
+                <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-violet-500/20 text-violet-400">
+                  One-Time
+                </span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className={`relative h-24 ${statusColors.bg} flex items-center justify-center`}>
+            <span className="text-4xl">🎯</span>
+            {/* Status badges */}
+            <div className="absolute top-3 left-3 flex items-center gap-2">
+              <span className={`px-2.5 py-1 rounded-full text-xs font-medium bg-slate-900/60 ${statusColors.text}`}>
+                {isActive ? "Active" : isUpcoming ? "Upcoming" : "Ended"}
+              </span>
+              {isOneTime && (
+                <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-900/60 text-violet-400">
+                  One-Time
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="p-4">
+          <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-amber-400 transition-colors">
+            {title}
+          </h3>
+
+          {/* Requirements */}
+          {requirements.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {requirements.slice(0, 2).map((req, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center px-2 py-1 bg-amber-500/10 border border-amber-500/30 rounded text-xs text-amber-400 font-medium"
+                >
+                  {formatRequirement(req)}
+                </span>
+              ))}
+              {requirements.length > 2 && (
+                <span className="inline-flex items-center px-2 py-1 bg-slate-800 rounded text-xs text-slate-400">
+                  +{requirements.length - 2}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="flex items-center justify-between text-sm text-slate-500 pt-3 border-t border-slate-800">
+            <div className="flex items-center gap-2">
+              <span>👥 {memberCount}</span>
+              {creator && (
+                <>
+                  <span>•</span>
+                  <span>{creator.username ? `@${creator.username}` : "Anonymous"}</span>
+                </>
+              )}
+            </div>
+            <span>
+              {isOneTime
+                ? formatDate(startDate)
+                : `${formatDate(startDate)} - ${formatDate(endDate)}`}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop List View */}
+      <div className="hidden md:block relative bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden hover:border-amber-500/40 hover:bg-slate-900/80 transition-all duration-300">
         <div className="flex items-stretch">
           {/* Thumbnail Section */}
-          <div className="relative w-32 sm:w-40 md:w-48 flex-shrink-0">
+          <div className="relative w-40 lg:w-48 flex-shrink-0">
             {imageUrl ? (
               <img
                 src={imageUrl}
@@ -101,7 +187,7 @@ export function ChallengeListItem({
               />
             ) : (
               <div className={`w-full h-full ${statusColors.bg} flex items-center justify-center`}>
-                <span className="text-4xl sm:text-5xl">🎯</span>
+                <span className="text-5xl">🎯</span>
               </div>
             )}
             {/* Status indicator dot */}
@@ -113,12 +199,12 @@ export function ChallengeListItem({
           </div>
 
           {/* Content Section */}
-          <div className="flex-1 p-4 sm:p-5 flex flex-col min-w-0">
+          <div className="flex-1 p-5 flex flex-col min-w-0">
             {/* Header Row */}
             <div className="flex items-start justify-between gap-3 mb-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-base sm:text-lg font-semibold text-white group-hover:text-amber-400 transition-colors truncate">
+                  <h3 className="text-lg font-semibold text-white group-hover:text-amber-400 transition-colors truncate">
                     {title}
                   </h3>
                   {/* Status Badge */}
@@ -157,7 +243,7 @@ export function ChallengeListItem({
                       {formatRequirement(req)}
                     </span>
                     {req.title && (
-                      <span className="text-amber-400/60 hidden sm:inline">
+                      <span className="text-amber-400/60">
                         — {req.title}
                       </span>
                     )}
@@ -220,7 +306,7 @@ export function ChallengeListItem({
           </div>
 
           {/* Arrow */}
-          <div className="hidden sm:flex items-center px-4">
+          <div className="flex items-center px-4">
             <svg
               className="w-5 h-5 text-slate-600 group-hover:text-amber-400 group-hover:translate-x-1 transition-all"
               fill="none"
