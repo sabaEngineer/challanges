@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { BadgeShowcase } from "@/components/badge-display";
 import { BackButton } from "@/components/back-button";
+import { ProfileHeader } from "./profile-header";
 import { getUserPoints, getUserRank } from "@/actions/leaderboard";
 import { getRankTitle, formatPoints, POINTS_LABEL } from "@/lib/points";
 
@@ -65,42 +66,16 @@ export default async function ProfilePage() {
         <BackButton fallbackHref="/feed" label="Back" />
         
         {/* Profile Header */}
-        <Card className="mb-8">
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            {user.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt={user.fullName || "User"}
-                className="w-24 h-24 rounded-full ring-4 ring-amber-500/30"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-3xl font-bold">
-                {(user.fullName || user.email || "U").charAt(0).toUpperCase()}
-              </div>
-            )}
-            
-            <div className="flex-1 text-center sm:text-left">
-              <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
-                <h1 className="text-2xl font-bold text-white">
-                  {user.fullName || "Anonymous User"}
-                </h1>
-                <span className={`text-sm ${rankTitle.color}`}>
-                  {rankTitle.icon} {rankTitle.title}
-                </span>
-              </div>
-              {user.username && (
-                <p className="text-amber-400 font-medium mb-1">@{user.username}</p>
-              )}
-              <p className="text-slate-400 text-sm">{user.email}</p>
-              <p className="text-slate-500 text-xs mt-2">
-                Member since {new Date(user.createdAt).toLocaleDateString("en-US", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </p>
-            </div>
-          </div>
-        </Card>
+        <ProfileHeader
+          user={{
+            avatarUrl: user.avatarUrl,
+            fullName: user.fullName,
+            username: user.username,
+            email: user.email,
+            createdAt: user.createdAt,
+          }}
+          rankTitle={rankTitle}
+        />
 
         {/* Points & Rank Card */}
         <Card className="mb-8 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30">
