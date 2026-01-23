@@ -66,13 +66,19 @@ export default async function ChallengePage({ params }: PageProps) {
     notFound();
   }
 
+  // Normalize dates for comparison (ignore time component)
   const now = new Date();
-  const isActive =
-    new Date(challenge.startDate) <= now && new Date(challenge.endDate) >= now;
-  const isUpcoming = new Date(challenge.startDate) > now;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const start = new Date(challenge.startDate);
+  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const end = new Date(challenge.endDate);
+  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  
+  const isActive = today >= startDay && today <= endDay;
+  const isUpcoming = today < startDay;
   const isStarted = !isUpcoming; // Challenge has started (active or ended)
-  const isEnded = new Date(challenge.endDate) < now;
-  const isOneTime = new Date(challenge.startDate).toDateString() === new Date(challenge.endDate).toDateString();
+  const isEnded = today > endDay;
+  const isOneTime = startDay.getTime() === endDay.getTime();
   const isOwner = user?.id === challenge.createdBy;
   const isMember = memberStatus === "active";
   

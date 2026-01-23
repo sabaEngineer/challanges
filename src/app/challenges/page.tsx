@@ -17,17 +17,27 @@ export default async function ChallengesPage({ searchParams }: PageProps) {
     getCurrentUser(),
   ]);
 
-  // Separate challenges by status
+  // Separate challenges by status (normalize dates to ignore time)
   const now = new Date();
-  const activeChallenges = challenges.filter(
-    (c) => new Date(c.startDate) <= now && new Date(c.endDate) >= now
-  );
-  const upcomingChallenges = challenges.filter(
-    (c) => new Date(c.startDate) > now
-  );
-  const endedChallenges = challenges.filter(
-    (c) => new Date(c.endDate) < now
-  );
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  const activeChallenges = challenges.filter((c) => {
+    const start = new Date(c.startDate);
+    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const end = new Date(c.endDate);
+    const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    return today >= startDay && today <= endDay;
+  });
+  const upcomingChallenges = challenges.filter((c) => {
+    const start = new Date(c.startDate);
+    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    return today < startDay;
+  });
+  const endedChallenges = challenges.filter((c) => {
+    const end = new Date(c.endDate);
+    const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    return today > endDay;
+  });
 
   // Filter challenges based on selected filter
   const getFilteredChallenges = () => {

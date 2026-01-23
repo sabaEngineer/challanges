@@ -100,7 +100,9 @@ export default async function UserProfilePage({ params }: PageProps) {
   const isOwnProfile = currentUser?.id === id;
 
   const { user, stats, recentChallenges } = profile;
+  // Normalize dates for comparison (ignore time component)
   const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const rankTitle = getRankTitle(points.totalPoints);
 
   return (
@@ -208,9 +210,12 @@ export default async function UserProfilePage({ params }: PageProps) {
             <h2 className="text-lg font-semibold text-white mb-4">Recent Challenges</h2>
             <div className="space-y-3">
               {recentChallenges.map((challenge) => {
-                const isActive =
-                  new Date(challenge.startDate) <= now && new Date(challenge.endDate) >= now;
-                const isEnded = new Date(challenge.endDate) < now;
+                const start = new Date(challenge.startDate);
+                const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+                const end = new Date(challenge.endDate);
+                const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+                const isActive = today >= startDay && today <= endDay;
+                const isEnded = today > endDay;
 
                 return (
                   <Link

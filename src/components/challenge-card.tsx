@@ -37,12 +37,17 @@ export function ChallengeCard({
   requirements = [],
   memberCount = 0,
 }: ChallengeCardProps) {
+  // Normalize dates for comparison (ignore time component)
   const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const start = new Date(startDate);
+  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
   const end = new Date(endDate);
-  const isActive = now >= start && now <= end;
-  const isUpcoming = now < start;
-  const isOneTime = start.toDateString() === end.toDateString();
+  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  
+  const isActive = today >= startDay && today <= endDay;
+  const isUpcoming = today < startDay;
+  const isOneTime = startDay.getTime() === endDay.getTime();
 
   const formatDate = (date: Date) =>
     new Date(date).toLocaleDateString("en-US", {

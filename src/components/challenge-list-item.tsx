@@ -42,13 +42,18 @@ export function ChallengeListItem({
   requirements = [],
   memberCount = 0,
 }: ChallengeListItemProps) {
+  // Normalize dates for comparison (ignore time component)
   const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const start = new Date(startDate);
+  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
   const end = new Date(endDate);
-  const isActive = now >= start && now <= end;
-  const isUpcoming = now < start;
-  const isEnded = now > end;
-  const isOneTime = start.toDateString() === end.toDateString();
+  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  
+  const isActive = today >= startDay && today <= endDay;
+  const isUpcoming = today < startDay;
+  const isEnded = today > endDay;
+  const isOneTime = startDay.getTime() === endDay.getTime();
 
   // Calculate progress for active challenges
   const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;

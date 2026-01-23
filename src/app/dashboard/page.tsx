@@ -23,11 +23,22 @@ export default async function DashboardPage() {
     getMyActiveChallengesForToday(),
   ]);
   
+  // Normalize dates for comparison (ignore time component)
   const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
   const activeChallenges = myChallenges.filter((c) => {
-    return new Date(c.startDate) <= now && new Date(c.endDate) >= now;
+    const start = new Date(c.startDate);
+    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const end = new Date(c.endDate);
+    const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    return today >= startDay && today <= endDay;
   });
-  const upcomingChallenges = myChallenges.filter((c) => new Date(c.startDate) > now);
+  const upcomingChallenges = myChallenges.filter((c) => {
+    const start = new Date(c.startDate);
+    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    return today < startDay;
+  });
 
   // Transform today's challenges for the component
   const todaysChallengesData = todaysChallenges.map((c) => ({

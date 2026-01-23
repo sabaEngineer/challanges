@@ -52,7 +52,7 @@ export function FilterTabs({ activeFilter, counts }: FilterTabsProps) {
   ];
 
   const getTabStyles = (tab: typeof tabs[0], isActive: boolean) => {
-    const baseStyles = "relative flex flex-col items-center gap-1 px-6 py-4 rounded-xl transition-all duration-200 cursor-pointer";
+    const baseStyles = "relative flex items-center justify-center gap-2 px-3 py-2 sm:flex-col sm:gap-1 sm:px-6 sm:py-4 rounded-xl transition-all duration-200 cursor-pointer";
     
     if (isActive) {
       switch (tab.color) {
@@ -103,7 +103,7 @@ export function FilterTabs({ activeFilter, counts }: FilterTabsProps) {
   };
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+    <div className="grid grid-cols-4 gap-2 sm:gap-3 mb-6 sm:mb-8">
       {tabs.map((tab) => {
         const isActive = activeFilter === tab.id;
         return (
@@ -113,13 +113,13 @@ export function FilterTabs({ activeFilter, counts }: FilterTabsProps) {
             className={getTabStyles(tab, isActive)}
           >
             {isActive && tab.id === "active" && (
-              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="absolute top-1 right-1 sm:top-2 sm:right-2 w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse" />
             )}
-            <span className="text-2xl">{tab.icon}</span>
-            <span className={`text-2xl font-bold ${getCountStyles(tab, isActive)}`}>
+            <span className="text-base sm:text-2xl">{tab.icon}</span>
+            <span className={`text-base sm:text-2xl font-bold ${getCountStyles(tab, isActive)}`}>
               {tab.count}
             </span>
-            <span className={`text-sm font-medium ${getLabelStyles(tab, isActive)}`}>
+            <span className={`hidden sm:block text-sm font-medium ${getLabelStyles(tab, isActive)}`}>
               {tab.label}
             </span>
           </Link>
