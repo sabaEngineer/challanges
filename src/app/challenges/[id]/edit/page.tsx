@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { EditChallengeForm } from "./edit-form";
+import { BackButton } from "@/components/back-button";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -51,6 +52,8 @@ export default async function EditChallengePage({ params }: PageProps) {
   return (
     <div className="min-h-screen px-4 py-8">
       <div className="max-w-2xl mx-auto">
+        <BackButton fallbackHref={`/challenges/${id}`} label="Back to Challenge" />
+        
         <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
           Edit Challenge
         </h1>

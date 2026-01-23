@@ -6,6 +6,7 @@ import { getUserMembershipStatus } from "@/actions/members";
 import { getTodayCheckin } from "@/actions/checkins";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { BackButton } from "@/components/back-button";
 import { MembersList } from "@/components/members-list";
 import { JoinButton } from "./join-button";
 import { CheckinButton } from "./checkin-button";
@@ -150,6 +151,8 @@ export default async function ChallengePage({ params }: PageProps) {
   return (
     <div className="min-h-screen px-4 py-8">
       <div className="max-w-6xl mx-auto">
+        <BackButton fallbackHref="/challenges" label="Back to Challenges" />
+
         {/* Sticky Action Bar - Shows Join button prominently for non-members */}
         {user && !isMember && !isEnded && memberStatus !== "pending" && (
           <div className="sticky top-14 md:top-16 z-40 mb-6 -mx-4 px-4">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getLeaderboard, getUserRank } from "@/actions/leaderboard";
 import { getCurrentUser } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
+import { BackButton } from "@/components/back-button";
 import { getRankTitle, formatPoints, POINTS, POINTS_LABEL } from "@/lib/points";
 import { getEarnedBadges } from "@/lib/badges";
 
@@ -16,6 +17,8 @@ export default async function LeaderboardPage() {
   return (
     <div className="min-h-screen px-4 py-8">
       <div className="max-w-3xl mx-auto">
+        <BackButton fallbackHref="/feed" label="Back" />
+        
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-amber-400 via-orange-400 to-red-400 bg-clip-text text-transparent">

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { BadgeShowcase } from "@/components/badge-display";
+import { BackButton } from "@/components/back-button";
 import { getUserPoints, getUserRank } from "@/actions/leaderboard";
 import { getRankTitle, formatPoints, POINTS_LABEL } from "@/lib/points";
 
@@ -105,6 +106,8 @@ export default async function UserProfilePage({ params }: PageProps) {
   return (
     <div className="min-h-screen px-4 py-8">
       <div className="max-w-2xl mx-auto">
+        <BackButton fallbackHref="/leaderboard" label="Back" />
+        
         {/* Profile Header */}
         <Card className="mb-8">
           <div className="flex flex-col sm:flex-row items-center gap-6">

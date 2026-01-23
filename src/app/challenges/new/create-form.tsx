@@ -225,11 +225,11 @@ export function CreateChallengeForm() {
                   onChange={(e) => setOneTimeDate(e.target.value)}
                   min={today}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
+                  className="w-full px-4 py-4 rounded-lg bg-slate-900/50 border border-slate-700 text-white text-base focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:p-2"
                 />
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     Start Date
@@ -240,7 +240,7 @@ export function CreateChallengeForm() {
                     onChange={(e) => setStartDate(e.target.value)}
                     min={today}
                     required
-                    className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
+                    className="w-full px-4 py-4 rounded-lg bg-slate-900/50 border border-slate-700 text-white text-base focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:p-2"
                   />
                 </div>
                 <div>
@@ -253,7 +253,7 @@ export function CreateChallengeForm() {
                     onChange={(e) => setEndDate(e.target.value)}
                     min={startDate || today}
                     required
-                    className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
+                    className="w-full px-4 py-4 rounded-lg bg-slate-900/50 border border-slate-700 text-white text-base focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:p-2"
                   />
                 </div>
               </div>

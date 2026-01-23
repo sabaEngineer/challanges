@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { CreateChallengeForm } from "./create-form";
+import { BackButton } from "@/components/back-button";
 
 export default async function CreateChallengePage() {
   const user = await getCurrentUser();
@@ -12,6 +13,8 @@ export default async function CreateChallengePage() {
   return (
     <div className="min-h-screen px-4 py-8">
       <div className="max-w-2xl mx-auto">
+        <BackButton fallbackHref="/challenges" label="Back to Challenges" />
+        
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Create a Challenge</h1>
           <p className="text-slate-400">
