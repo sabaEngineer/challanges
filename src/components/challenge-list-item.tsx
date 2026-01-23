@@ -42,33 +42,35 @@ export function ChallengeListItem({
   requirements = [],
   memberCount = 0,
 }: ChallengeListItemProps) {
-  // Use UTC for consistent date handling in production
+  // Calculate "today" with timezone offset (UTC+4 for Georgia)
+  const TIMEZONE_OFFSET_HOURS = 4;
   const now = new Date();
-  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const adjustedNow = new Date(now.getTime() + TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000);
+  const todayLocal = new Date(Date.UTC(adjustedNow.getUTCFullYear(), adjustedNow.getUTCMonth(), adjustedNow.getUTCDate()));
   const start = new Date(startDate);
-  const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+  const startDay = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
   const end = new Date(endDate);
-  const endUTC = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+  const endDay = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
   
-  const isActive = todayUTC >= startUTC && todayUTC <= endUTC;
-  const isUpcoming = todayUTC < startUTC;
-  const isEnded = todayUTC > endUTC;
-  const isOneTime = startUTC.getTime() === endUTC.getTime();
+  const isActive = todayLocal >= startDay && todayLocal <= endDay;
+  const isUpcoming = todayLocal < startDay;
+  const isEnded = todayLocal > endDay;
+  const isOneTime = startDay.getTime() === endDay.getTime();
 
   // Calculate progress for active challenges
-  const totalDays = Math.ceil((endUTC.getTime() - startUTC.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const totalDays = Math.ceil((endDay.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const daysElapsed = isUpcoming
     ? 0
     : Math.min(
-        Math.ceil((todayUTC.getTime() - startUTC.getTime()) / (1000 * 60 * 60 * 24)) + 1,
+        Math.ceil((todayLocal.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24)) + 1,
         totalDays
       );
   const progressPercent = isOneTime ? (isEnded ? 100 : 0) : Math.round((daysElapsed / totalDays) * 100);
 
   // Days remaining or until start
   const daysRemaining = isUpcoming
-    ? Math.ceil((startUTC.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24))
-    : Math.max(0, Math.ceil((endUTC.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24)));
+    ? Math.ceil((startDay.getTime() - todayLocal.getTime()) / (1000 * 60 * 60 * 24))
+    : Math.max(0, Math.ceil((endDay.getTime() - todayLocal.getTime()) / (1000 * 60 * 60 * 24)));
 
   const formatDate = (date: Date) =>
     new Date(date).toLocaleDateString("en-US", {

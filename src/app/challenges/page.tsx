@@ -20,45 +20,29 @@ export default async function ChallengesPage({ searchParams }: PageProps) {
     getCurrentUser(),
   ]);
 
-  // Use UTC for consistent date handling in production
+  // Calculate "today" with timezone offset for Georgia (UTC+4)
+  // This ensures users see correct status based on their local date
+  const TIMEZONE_OFFSET_HOURS = 4; // UTC+4 for Georgia
   const now = new Date();
-  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  
-  // Debug logging for production
-  console.log("=== DATE DEBUG ===");
-  console.log("Server now:", now.toISOString());
-  console.log("Server todayUTC:", todayUTC.toISOString());
-  if (challenges.length > 0) {
-    const c = challenges[0];
-    console.log("First challenge:", c.title);
-    console.log("  startDate raw:", c.startDate);
-    console.log("  startDate ISO:", new Date(c.startDate).toISOString());
-    console.log("  endDate raw:", c.endDate);
-    console.log("  endDate ISO:", new Date(c.endDate).toISOString());
-  }
-  console.log("==================");
+  const adjustedNow = new Date(now.getTime() + TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000);
+  const todayLocal = new Date(Date.UTC(adjustedNow.getUTCFullYear(), adjustedNow.getUTCMonth(), adjustedNow.getUTCDate()));
   
   const activeChallenges = challenges.filter((c) => {
     const start = new Date(c.startDate);
-    const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+    const startDate = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
     const end = new Date(c.endDate);
-    const endUTC = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
-    
-    const isActive = todayUTC >= startUTC && todayUTC <= endUTC;
-    // Debug each challenge's status
-    console.log(`Challenge "${c.title}": todayUTC=${todayUTC.toISOString()}, startUTC=${startUTC.toISOString()}, endUTC=${endUTC.toISOString()}, isActive=${isActive}`);
-    
-    return isActive;
+    const endDate = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+    return todayLocal >= startDate && todayLocal <= endDate;
   });
   const upcomingChallenges = challenges.filter((c) => {
     const start = new Date(c.startDate);
-    const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
-    return todayUTC < startUTC;
+    const startDate = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+    return todayLocal < startDate;
   });
   const endedChallenges = challenges.filter((c) => {
     const end = new Date(c.endDate);
-    const endUTC = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
-    return todayUTC > endUTC;
+    const endDate = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+    return todayLocal > endDate;
   });
 
   // Filter challenges based on selected filter

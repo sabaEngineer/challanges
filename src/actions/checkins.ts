@@ -270,18 +270,20 @@ export async function getTodayCheckin(challengeId: string) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  // Use UTC for consistent date handling in production
+  // Calculate "today" with timezone offset (UTC+4 for Georgia)
+  const TIMEZONE_OFFSET_HOURS = 4;
   const now = new Date();
-  const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
-  const endOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+  const adjustedNow = new Date(now.getTime() + TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000);
+  const startOfToday = new Date(Date.UTC(adjustedNow.getUTCFullYear(), adjustedNow.getUTCMonth(), adjustedNow.getUTCDate(), 0, 0, 0, 0));
+  const endOfToday = new Date(Date.UTC(adjustedNow.getUTCFullYear(), adjustedNow.getUTCMonth(), adjustedNow.getUTCDate(), 23, 59, 59, 999));
 
   return db.dailyCheckin.findFirst({
     where: {
       challengeId,
       userId: user.id,
       checkinDate: {
-        gte: startOfTodayUTC,
-        lte: endOfTodayUTC,
+        gte: startOfToday,
+        lte: endOfToday,
       },
     },
     include: {
@@ -298,18 +300,18 @@ export async function getCheckinForDate(challengeId: string, date: string) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  // Parse date as UTC for consistent handling
+  // Parse date string to get date components
   const [year, month, day] = date.split('-').map(Number);
-  const startOfDayUTC = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
-  const endOfDayUTC = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+  const startOfDay = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+  const endOfDay = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
 
   return db.dailyCheckin.findFirst({
     where: {
       challengeId,
       userId: user.id,
       checkinDate: {
-        gte: startOfDayUTC,
-        lte: endOfDayUTC,
+        gte: startOfDay,
+        lte: endOfDay,
       },
     },
     include: {
@@ -346,10 +348,12 @@ export async function getMyActiveChallengesForToday() {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  // Use UTC for consistent date handling in production
+  // Calculate "today" with timezone offset (UTC+4 for Georgia)
+  const TIMEZONE_OFFSET_HOURS = 4;
   const now = new Date();
-  const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
-  const endOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+  const adjustedNow = new Date(now.getTime() + TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000);
+  const startOfToday = new Date(Date.UTC(adjustedNow.getUTCFullYear(), adjustedNow.getUTCMonth(), adjustedNow.getUTCDate(), 0, 0, 0, 0));
+  const endOfToday = new Date(Date.UTC(adjustedNow.getUTCFullYear(), adjustedNow.getUTCMonth(), adjustedNow.getUTCDate(), 23, 59, 59, 999));
 
   // Get active challenges where user is a member
   const memberships = await db.challengeMember.findMany({
@@ -357,8 +361,8 @@ export async function getMyActiveChallengesForToday() {
       userId: user.id,
       status: "active",
       challenge: {
-        startDate: { lte: endOfTodayUTC },
-        endDate: { gte: startOfTodayUTC },
+        startDate: { lte: endOfToday },
+        endDate: { gte: startOfToday },
       },
     },
     include: {
@@ -369,8 +373,8 @@ export async function getMyActiveChallengesForToday() {
             where: {
               userId: user.id,
               checkinDate: {
-                gte: startOfTodayUTC,
-                lte: endOfTodayUTC,
+                gte: startOfToday,
+                lte: endOfToday,
               },
             },
             include: {

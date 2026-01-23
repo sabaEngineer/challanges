@@ -1,94 +1,114 @@
 /**
  * Date utilities for consistent date handling across timezones
  * 
- * IMPORTANT: Production servers run in UTC. We use UTC consistently
- * for all date comparisons to ensure behavior is the same in dev and prod.
- * 
- * Database @db.Date columns store dates without timezone, typically as UTC midnight.
+ * IMPORTANT: We use a fixed timezone offset to ensure dates match user expectations.
+ * Default offset is UTC+4 (Georgia timezone) - adjust TIMEZONE_OFFSET_HOURS if needed.
  */
 
+// Timezone offset in hours from UTC (UTC+4 for Georgia)
+export const TIMEZONE_OFFSET_HOURS = 4;
+
 /**
- * Get today's date in UTC for database comparisons
- * Returns start and end of day in UTC
+ * Get the current date adjusted for the configured timezone
  */
-export function getTodayRangeUTC() {
+export function getAdjustedNow(): Date {
   const now = new Date();
+  return new Date(now.getTime() + TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000);
+}
+
+/**
+ * Get today's date adjusted for timezone, for database comparisons
+ * Returns start and end of day
+ */
+export function getTodayRange() {
+  const adjustedNow = getAdjustedNow();
   
-  // Start of today in UTC
-  const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+  // Start of today (adjusted for timezone)
+  const startOfDay = new Date(Date.UTC(adjustedNow.getUTCFullYear(), adjustedNow.getUTCMonth(), adjustedNow.getUTCDate(), 0, 0, 0, 0));
   
-  // End of today in UTC
-  const endOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+  // End of today (adjusted for timezone)
+  const endOfDay = new Date(Date.UTC(adjustedNow.getUTCFullYear(), adjustedNow.getUTCMonth(), adjustedNow.getUTCDate(), 23, 59, 59, 999));
   
   return { startOfDay, endOfDay };
 }
 
 /**
- * Normalize a date to UTC midnight for date-only comparisons
+ * Get today's date in UTC for database comparisons (legacy - use getTodayRange instead)
  */
-export function toUTCMidnight(date: Date | string): Date {
+export function getTodayRangeUTC() {
+  return getTodayRange();
+}
+
+/**
+ * Normalize a date to midnight for date-only comparisons
+ */
+export function toMidnight(date: Date | string): Date {
   const d = new Date(date);
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
 }
 
 /**
- * Get today's date as UTC midnight
+ * Get today's date at midnight (adjusted for configured timezone)
  */
-export function getTodayUTC(): Date {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+export function getToday(): Date {
+  const adjustedNow = getAdjustedNow();
+  return new Date(Date.UTC(adjustedNow.getUTCFullYear(), adjustedNow.getUTCMonth(), adjustedNow.getUTCDate(), 0, 0, 0, 0));
 }
 
+// Legacy aliases
+export const toUTCMidnight = toMidnight;
+export const getTodayUTC = getToday;
+
 /**
- * Check if a date represents the same calendar day as today (in UTC)
+ * Check if a date represents the same calendar day as today (adjusted for timezone)
  */
 export function isToday(date: Date | string): boolean {
-  const d = toUTCMidnight(date);
-  const today = getTodayUTC();
+  const d = toMidnight(date);
+  const today = getToday();
   return d.getTime() === today.getTime();
 }
 
 /**
- * Compare two dates by calendar day only (using UTC, ignoring time)
+ * Compare two dates by calendar day only (ignoring time)
  * Returns: negative if a < b, 0 if same day, positive if a > b
  */
 export function compareDates(a: Date | string, b: Date | string): number {
-  const dateA = toUTCMidnight(a);
-  const dateB = toUTCMidnight(b);
+  const dateA = toMidnight(a);
+  const dateB = toMidnight(b);
   return dateA.getTime() - dateB.getTime();
 }
 
 /**
- * Check if today (UTC) is within a date range (inclusive)
+ * Check if today is within a date range (inclusive)
  */
 export function isTodayInRange(startDate: Date | string, endDate: Date | string): boolean {
-  const today = getTodayUTC();
-  const start = toUTCMidnight(startDate);
-  const end = toUTCMidnight(endDate);
+  const today = getToday();
+  const start = toMidnight(startDate);
+  const end = toMidnight(endDate);
   
   return today >= start && today <= end;
 }
 
 /**
- * Check if today (UTC) is before a date
+ * Check if today is before a date
  */
 export function isTodayBefore(date: Date | string): boolean {
-  const today = getTodayUTC();
-  const target = toUTCMidnight(date);
+  const today = getToday();
+  const target = toMidnight(date);
   return today < target;
 }
 
 /**
- * Check if today (UTC) is after a date
+ * Check if today is after a date
  */
 export function isTodayAfter(date: Date | string): boolean {
-  const today = getTodayUTC();
-  const target = toUTCMidnight(date);
+  const today = getToday();
+  const target = toMidnight(date);
   return today > target;
 }
 
 /**
- * Get challenge status based on dates (using UTC)
+ * Get challenge status based on dates
  */
 export function getChallengeStatus(startDate: Date | string, endDate: Date | string): 'active' | 'upcoming' | 'ended' {
   if (isTodayInRange(startDate, endDate)) return 'active';
@@ -97,12 +117,14 @@ export function getChallengeStatus(startDate: Date | string, endDate: Date | str
 }
 
 /**
- * Parse a date string (YYYY-MM-DD) to a Date at UTC midnight
+ * Parse a date string (YYYY-MM-DD) to a Date at midnight
  * Use this when storing dates from form inputs
  */
-export function parseLocalDateToUTC(dateStr: string): Date {
-  // Parse as UTC midnight
+export function parseDateString(dateStr: string): Date {
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
 }
+
+// Legacy alias
+export const parseLocalDateToUTC = parseDateString;
 

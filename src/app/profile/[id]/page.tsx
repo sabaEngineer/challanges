@@ -100,9 +100,11 @@ export default async function UserProfilePage({ params }: PageProps) {
   const isOwnProfile = currentUser?.id === id;
 
   const { user, stats, recentChallenges } = profile;
-  // Use UTC for consistent date handling in production
+  // Calculate "today" with timezone offset (UTC+4 for Georgia)
+  const TIMEZONE_OFFSET_HOURS = 4;
   const now = new Date();
-  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const adjustedNow = new Date(now.getTime() + TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000);
+  const todayLocal = new Date(Date.UTC(adjustedNow.getUTCFullYear(), adjustedNow.getUTCMonth(), adjustedNow.getUTCDate()));
   const rankTitle = getRankTitle(points.totalPoints);
 
   return (
@@ -211,11 +213,11 @@ export default async function UserProfilePage({ params }: PageProps) {
             <div className="space-y-3">
               {recentChallenges.map((challenge) => {
                 const start = new Date(challenge.startDate);
-                const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+                const startDay = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
                 const end = new Date(challenge.endDate);
-                const endUTC = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
-                const isActive = todayUTC >= startUTC && todayUTC <= endUTC;
-                const isEnded = todayUTC > endUTC;
+                const endDay = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+                const isActive = todayLocal >= startDay && todayLocal <= endDay;
+                const isEnded = todayLocal > endDay;
 
                 return (
                   <Link

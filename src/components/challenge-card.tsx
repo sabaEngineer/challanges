@@ -37,17 +37,19 @@ export function ChallengeCard({
   requirements = [],
   memberCount = 0,
 }: ChallengeCardProps) {
-  // Use UTC for consistent date handling in production
+  // Calculate "today" with timezone offset (UTC+4 for Georgia)
+  const TIMEZONE_OFFSET_HOURS = 4;
   const now = new Date();
-  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const adjustedNow = new Date(now.getTime() + TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000);
+  const todayLocal = new Date(Date.UTC(adjustedNow.getUTCFullYear(), adjustedNow.getUTCMonth(), adjustedNow.getUTCDate()));
   const start = new Date(startDate);
-  const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+  const startDay = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
   const end = new Date(endDate);
-  const endUTC = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+  const endDay = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
   
-  const isActive = todayUTC >= startUTC && todayUTC <= endUTC;
-  const isUpcoming = todayUTC < startUTC;
-  const isOneTime = startUTC.getTime() === endUTC.getTime();
+  const isActive = todayLocal >= startDay && todayLocal <= endDay;
+  const isUpcoming = todayLocal < startDay;
+  const isOneTime = startDay.getTime() === endDay.getTime();
 
   const formatDate = (date: Date) =>
     new Date(date).toLocaleDateString("en-US", {

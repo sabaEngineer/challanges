@@ -26,21 +26,23 @@ export default async function DashboardPage() {
     getMyActiveChallengesForToday(),
   ]);
   
-  // Use UTC for consistent date handling in production
+  // Calculate "today" with timezone offset (UTC+4 for Georgia)
+  const TIMEZONE_OFFSET_HOURS = 4;
   const now = new Date();
-  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const adjustedNow = new Date(now.getTime() + TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000);
+  const todayLocal = new Date(Date.UTC(adjustedNow.getUTCFullYear(), adjustedNow.getUTCMonth(), adjustedNow.getUTCDate()));
   
   const activeChallenges = myChallenges.filter((c) => {
     const start = new Date(c.startDate);
-    const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+    const startDay = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
     const end = new Date(c.endDate);
-    const endUTC = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
-    return todayUTC >= startUTC && todayUTC <= endUTC;
+    const endDay = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+    return todayLocal >= startDay && todayLocal <= endDay;
   });
   const upcomingChallenges = myChallenges.filter((c) => {
     const start = new Date(c.startDate);
-    const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
-    return todayUTC < startUTC;
+    const startDay = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+    return todayLocal < startDay;
   });
 
   // Transform today's challenges for the component
