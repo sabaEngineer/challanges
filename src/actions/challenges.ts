@@ -38,8 +38,9 @@ export async function createChallenge(
     return { success: false, error: "Please fill in all required fields" };
   }
 
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  // Parse dates as local dates (add time component to avoid UTC interpretation)
+  const start = new Date(startDate + "T00:00:00");
+  const end = new Date(endDate + "T00:00:00");
 
   if (start > end) {
     return { success: false, error: "End date must be after or same as start date" };

@@ -98,18 +98,22 @@ export async function createOrUpdateCheckin(
     return { success: false, error: "Challenge not found" };
   }
 
-  const checkinDate = new Date(date);
+  // Parse date as local date to avoid timezone issues
+  const checkinDate = new Date(date + "T12:00:00"); // Use noon to avoid edge cases
   checkinDate.setHours(0, 0, 0, 0);
   
-  const startDate = new Date(challenge.startDate);
-  startDate.setHours(0, 0, 0, 0);
+  // Compare dates by extracting date parts (handles @db.Date columns properly)
+  const checkinDay = new Date(checkinDate.getFullYear(), checkinDate.getMonth(), checkinDate.getDate());
   
-  const endDate = new Date(challenge.endDate);
-  endDate.setHours(23, 59, 59, 999);
+  const start = new Date(challenge.startDate);
+  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  
+  const end = new Date(challenge.endDate);
+  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
 
   // Allow check-in only within challenge dates
-  if (checkinDate < startDate || checkinDate > endDate) {
-    return { success: false, error: `Check-in date must be within challenge dates (${startDate.toDateString()} - ${endDate.toDateString()})` };
+  if (checkinDay < startDay || checkinDay > endDay) {
+    return { success: false, error: `Check-in date must be within challenge dates (${startDay.toDateString()} - ${endDay.toDateString()})` };
   }
 
   // Check if all items are done
@@ -268,15 +272,18 @@ export async function getTodayCheckin(challengeId: string) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Use date range to handle timezone issues with @db.Date columns
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-  return db.dailyCheckin.findUnique({
+  return db.dailyCheckin.findFirst({
     where: {
-      challengeId_userId_checkinDate: {
-        challengeId,
-        userId: user.id,
-        checkinDate: today,
+      challengeId,
+      userId: user.id,
+      checkinDate: {
+        gte: startOfToday,
+        lte: endOfToday,
       },
     },
     include: {
@@ -293,15 +300,18 @@ export async function getCheckinForDate(challengeId: string, date: string) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const checkinDate = new Date(date);
-  checkinDate.setHours(0, 0, 0, 0);
+  // Parse the date string as local date and create a range
+  const parsedDate = new Date(date + "T00:00:00");
+  const startOfDay = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate(), 0, 0, 0, 0);
+  const endOfDay = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate(), 23, 59, 59, 999);
 
-  return db.dailyCheckin.findUnique({
+  return db.dailyCheckin.findFirst({
     where: {
-      challengeId_userId_checkinDate: {
-        challengeId,
-        userId: user.id,
-        checkinDate,
+      challengeId,
+      userId: user.id,
+      checkinDate: {
+        gte: startOfDay,
+        lte: endOfDay,
       },
     },
     include: {
@@ -338,8 +348,11 @@ export async function getMyActiveChallengesForToday() {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Use end of day for startDate comparison and start of day for endDate
+  // This ensures challenges starting "today" are included regardless of timezone
+  const now = new Date();
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
   // Get active challenges where user is a member
   const memberships = await db.challengeMember.findMany({
@@ -347,8 +360,8 @@ export async function getMyActiveChallengesForToday() {
       userId: user.id,
       status: "active",
       challenge: {
-        startDate: { lte: today },
-        endDate: { gte: today },
+        startDate: { lte: endOfToday },
+        endDate: { gte: startOfToday },
       },
     },
     include: {
@@ -358,7 +371,10 @@ export async function getMyActiveChallengesForToday() {
           dailyCheckins: {
             where: {
               userId: user.id,
-              checkinDate: today,
+              checkinDate: {
+                gte: startOfToday,
+                lte: endOfToday,
+              },
             },
             include: {
               items: true,
