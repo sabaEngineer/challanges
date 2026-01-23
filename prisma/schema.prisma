@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  fullName  String?  @map("full_name")
+  avatarUrl String?  @map("avatar_url") @db.Text
+  googleId  String?  @map("google_id") @db.VarChar(255)
+  username  String?  @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  challenges       Challenge[]       @relation("ChallengeCreator")
+  challengeMembers ChallengeMember[]
+  notifications    Notification[]
+  dailyCheckins    DailyCheckin[]
+  reactions        PostReaction[]
+  comments         PostComment[]
+
+  @@map("users")
+}
+
+enum ChallengeType {
+  distance // running, walking, cycling (measured in km, m, steps)
+  time     // meditation, workout, reading (minutes, hours)
+  count    // push-ups, pages, reps
+  yes_no   // wake up early, no sugar, no smoking
+
+  @@map("challenge_type")
+}
+
+enum ChallengeUnit {
+  reps     // push-ups, squats
+  steps    // walking challenges
+  km       // running, cycling
+  meters   // short distance challenges
+  minutes  // meditation, workouts
+  hours    // reading, deep work
+  pages    // reading challenges
+  calories // nutrition challenges
+  liters   // water intake
+  workouts // gym session count
+  none     // for yes_no challenges
+
+  @@map("challenge_unit")
+}
+
+enum MemberStatus {
+  active
+  left
+  removed
+  pending
+
+  @@map("member_status")
+}
+
+enum NotificationType {
+  challenge_invitation
+  invitation_accepted
+  invitation_rejected
+  challenge_started
+  challenge_ended
+  member_checkin
+
+  @@map("notification_type")
+}
+
+enum ReactionType {
+  fire
+  strong
+  kudos
+  not_bad
+
+  @@map("reaction_type")
+}
+
+model Challenge {
+  id          String   @id @default(uuid())
+  title       String
+  description String?  @db.Text
+  imageUrl    String?  @map("image_url") @db.Text
+  startDate   DateTime @map("start_date") @db.Date
+  endDate     DateTime @map("end_date") @db.Date
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  creator       User                   @relation("ChallengeCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  requirements  ChallengeRequirement[]
+  members       ChallengeMember[]
+  notifications Notification[]
+  dailyCheckins DailyCheckin[]
+
+  @@map("challenges")
+}
+
+model ChallengeRequirement {
+  id          String        @id @default(uuid())
+  challengeId String        @map("challenge_id")
+  title       String?
+  type        ChallengeType
+  targetValue Decimal?      @map("target_value") @db.Decimal
+  unit        ChallengeUnit
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  challenge         Challenge           @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  dailyCheckinItems DailyCheckinItem[]
+
+  @@map("challenge_requirements")
+}
+
+model ChallengeMember {
+  id            String       @id @default(uuid())
+  challengeId   String       @map("challenge_id")
+  userId        String       @map("user_id")
+  status        MemberStatus @default(pending)
+  joinedAt      DateTime     @default(now()) @map("joined_at")
+  leftAt        DateTime?    @map("left_at")
+  currentStreak Int          @default(0) @map("current_streak")
+  bestStreak    Int          @default(0) @map("best_streak")
+  totalValue    Decimal      @default(0) @map("total_value") @db.Decimal
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+  @@map("challenge_members")
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String           @map("user_id")
+  type        NotificationType
+  title       String
+  message     String
+  challengeId String?          @map("challenge_id")
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge Challenge? @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model DailyCheckin {
+  id          String   @id @default(uuid())
+  challengeId String   @map("challenge_id")
+  userId      String   @map("user_id")
+  checkinDate DateTime @map("checkin_date") @db.Date
+  note        String?  @db.Text
+  imageUrl    String?  @map("image_url") @db.Text
+  isDone      Boolean  @default(false) @map("is_done")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  challenge Challenge          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     DailyCheckinItem[]
+  reactions PostReaction[]
+  comments  PostComment[]
+
+  @@unique([challengeId, userId, checkinDate])
+  @@map("daily_checkins")
+}
+
+model DailyCheckinItem {
+  id            String   @id @default(uuid())
+  checkinId     String   @map("checkin_id")
+  requirementId String   @map("requirement_id")
+  value         Decimal? @db.Decimal
+  isDone        Boolean  @default(false) @map("is_done")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  checkin     DailyCheckin         @relation(fields: [checkinId], references: [id], onDelete: Cascade)
+  requirement ChallengeRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  @@unique([checkinId, requirementId])
+  @@map("daily_checkin_items")
+}
+
+model PostReaction {
+  id        String       @id @default(uuid())
+  checkinId String       @map("checkin_id")
+  userId    String       @map("user_id")
+  type      ReactionType
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  checkin DailyCheckin @relation(fields: [checkinId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([checkinId, userId, type])
+  @@map("post_reactions")
+}
+
+model PostComment {
+  id        String   @id @default(uuid())
+  checkinId String   @map("checkin_id")
+  userId    String   @map("user_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  checkin DailyCheckin @relation(fields: [checkinId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("post_comments")
+}

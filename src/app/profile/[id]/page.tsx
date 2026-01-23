@@ -1,0 +1,285 @@
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { db } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+import { Card } from "@/components/ui/card";
+import { BadgeShowcase } from "@/components/badge-display";
+import { getUserPoints, getUserRank } from "@/actions/leaderboard";
+import { getRankTitle, formatPoints, POINTS_LABEL } from "@/lib/points";
+
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+async function getUserProfile(userId: string) {
+  const now = new Date();
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      fullName: true,
+      username: true,
+      email: true,
+      avatarUrl: true,
+      createdAt: true,
+    },
+  });
+
+  if (!user) return null;
+
+  const [challengesCreated, challengesJoined, totalCheckins, challengesCompleted, bestStreakRecord] =
+    await Promise.all([
+      db.challenge.count({ where: { createdBy: userId } }),
+      db.challengeMember.count({ where: { userId, status: "active" } }),
+      db.dailyCheckin.count({ where: { userId, isDone: true } }),
+      db.challengeMember.count({
+        where: {
+          userId,
+          status: "active",
+          challenge: { endDate: { lt: now } },
+        },
+      }),
+      db.challengeMember.findFirst({
+        where: { userId },
+        orderBy: { bestStreak: "desc" },
+        select: { bestStreak: true },
+      }),
+    ]);
+
+  // Get recent challenges the user is part of
+  const recentChallenges = await db.challengeMember.findMany({
+    where: { userId, status: "active" },
+    include: {
+      challenge: {
+        select: {
+          id: true,
+          title: true,
+          imageUrl: true,
+          startDate: true,
+          endDate: true,
+        },
+      },
+    },
+    orderBy: { joinedAt: "desc" },
+    take: 5,
+  });
+
+  return {
+    user,
+    stats: {
+      challengesCreated,
+      challengesJoined,
+      totalCheckins,
+      challengesCompleted,
+      bestStreak: bestStreakRecord?.bestStreak || 0,
+    },
+    recentChallenges: recentChallenges.map((m) => ({
+      ...m.challenge,
+      currentStreak: m.currentStreak,
+      bestStreak: m.bestStreak,
+    })),
+  };
+}
+
+export default async function UserProfilePage({ params }: PageProps) {
+  const { id } = await params;
+  const [currentUser, profile, points, rank] = await Promise.all([
+    getCurrentUser(),
+    getUserProfile(id),
+    getUserPoints(id),
+    getUserRank(id),
+  ]);
+
+  if (!profile) {
+    notFound();
+  }
+
+  // If viewing own profile, could redirect to /profile
+  const isOwnProfile = currentUser?.id === id;
+
+  const { user, stats, recentChallenges } = profile;
+  const now = new Date();
+  const rankTitle = getRankTitle(points.totalPoints);
+
+  return (
+    <div className="min-h-screen px-4 py-8">
+      <div className="max-w-2xl mx-auto">
+        {/* Profile Header */}
+        <Card className="mb-8">
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            {user.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.fullName || "User"}
+                className="w-24 h-24 rounded-full ring-4 ring-amber-500/30"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-3xl font-bold">
+                {(user.fullName || user.email || "U").charAt(0).toUpperCase()}
+              </div>
+            )}
+
+            <div className="flex-1 text-center sm:text-left">
+              <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
+                <h1 className="text-2xl font-bold text-white">
+                  {user.fullName || "Anonymous User"}
+                </h1>
+                <span className={`text-sm ${rankTitle.color}`}>
+                  {rankTitle.icon} {rankTitle.title}
+                </span>
+                {isOwnProfile && (
+                  <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">
+                    You
+                  </span>
+                )}
+              </div>
+              {user.username && (
+                <p className="text-amber-400 font-medium mb-1">@{user.username}</p>
+              )}
+              <p className="text-slate-500 text-sm">
+                Member since{" "}
+                {new Date(user.createdAt).toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Points & Rank Card */}
+        <Card className="mb-8 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-400">{POINTS_LABEL} 🍏</p>
+              <p className="text-3xl font-bold text-amber-400">{formatPoints(points.totalPoints)} 🍏</p>
+              <div className="flex gap-4 mt-2 text-xs text-slate-500">
+                <span>Check-ins: {points.checkinPoints} 🍏</span>
+                <span>Challenges: {points.challengePoints} 🍏</span>
+              </div>
+            </div>
+            {rank && (
+              <Link href="/leaderboard" className="text-right hover:opacity-80 transition-opacity">
+                <p className="text-sm text-slate-400">Global Rank</p>
+                <p className="text-3xl font-bold text-white">#{rank.rank}</p>
+                <p className="text-xs text-slate-500">of {rank.totalUsers} players</p>
+              </Link>
+            )}
+          </div>
+        </Card>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
+          <Card className="text-center py-4">
+            <div className="text-2xl font-bold text-amber-400">{stats.challengesCreated}</div>
+            <div className="text-xs text-slate-400">Created</div>
+          </Card>
+          <Card className="text-center py-4">
+            <div className="text-2xl font-bold text-emerald-400">{stats.challengesJoined}</div>
+            <div className="text-xs text-slate-400">Joined</div>
+          </Card>
+          <Card className="text-center py-4">
+            <div className="text-2xl font-bold text-green-400">{stats.challengesCompleted}</div>
+            <div className="text-xs text-slate-400">Completed</div>
+          </Card>
+          <Card className="text-center py-4">
+            <div className="text-2xl font-bold text-blue-400">{stats.totalCheckins}</div>
+            <div className="text-xs text-slate-400">Check-ins</div>
+          </Card>
+          <Card className="text-center py-4">
+            <div className="text-2xl font-bold text-violet-400">{stats.bestStreak}</div>
+            <div className="text-xs text-slate-400">Best Streak</div>
+          </Card>
+        </div>
+
+        {/* Badges Section */}
+        <Card className="mb-8">
+          <h2 className="text-lg font-semibold text-white mb-6">🏅 Badges & Achievements</h2>
+          <BadgeShowcase completedChallenges={stats.challengesCompleted} />
+        </Card>
+
+        {/* Recent Challenges */}
+        {recentChallenges.length > 0 && (
+          <Card>
+            <h2 className="text-lg font-semibold text-white mb-4">Recent Challenges</h2>
+            <div className="space-y-3">
+              {recentChallenges.map((challenge) => {
+                const isActive =
+                  new Date(challenge.startDate) <= now && new Date(challenge.endDate) >= now;
+                const isEnded = new Date(challenge.endDate) < now;
+
+                return (
+                  <Link
+                    key={challenge.id}
+                    href={`/challenges/${challenge.id}`}
+                    className="flex items-center gap-4 p-3 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors"
+                  >
+                    {challenge.imageUrl ? (
+                      <img
+                        src={challenge.imageUrl}
+                        alt={challenge.title}
+                        className="w-12 h-12 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
+                        <span className="text-xl">🎯</span>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-white truncate">{challenge.title}</p>
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <span
+                          className={`px-1.5 py-0.5 rounded ${
+                            isActive
+                              ? "bg-emerald-500/20 text-emerald-400"
+                              : isEnded
+                              ? "bg-slate-500/20 text-slate-400"
+                              : "bg-blue-500/20 text-blue-400"
+                          }`}
+                        >
+                          {isActive ? "Active" : isEnded ? "Ended" : "Upcoming"}
+                        </span>
+                        {challenge.currentStreak > 0 && (
+                          <span className="text-amber-400">
+                            🔥 {challenge.currentStreak} day streak
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <svg
+                      className="w-5 h-5 text-slate-600"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </Link>
+                );
+              })}
+            </div>
+          </Card>
+        )}
+
+        {/* Back link for own profile */}
+        {isOwnProfile && (
+          <div className="mt-6 text-center">
+            <Link
+              href="/profile"
+              className="text-amber-400 hover:text-amber-300 text-sm"
+            >
+              ← Go to Account Settings
+            </Link>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
