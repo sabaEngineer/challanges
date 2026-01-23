@@ -78,7 +78,7 @@ export async function getFeedPosts(limit: number = 20, offset: number = 0) {
         getMultipleCommentCounts(checkinIds),
         getUsersCompletedChallenges(userIds),
       ])
-    : [{}, {}, {}];
+    : [{} as Record<string, { counts: Record<ReactionType, number>; userReacted: ReactionType[] }>, {} as Record<string, number>, {} as Record<string, number>];
 
   return checkins.map((checkin) => ({
     id: checkin.id,

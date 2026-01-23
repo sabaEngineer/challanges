@@ -10,10 +10,10 @@ interface JoinButtonProps {
   memberStatus: "active" | "pending" | "left" | "removed" | null;
   isOwner: boolean;
   isEnded: boolean;
-  size?: "default" | "sm" | "lg";
+  size?: "sm" | "md" | "lg";
 }
 
-export function JoinButton({ challengeId, memberStatus, isOwner, isEnded, size = "default" }: JoinButtonProps) {
+export function JoinButton({ challengeId, memberStatus, isOwner, isEnded, size }: JoinButtonProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
