@@ -38,9 +38,11 @@ export async function createChallenge(
     return { success: false, error: "Please fill in all required fields" };
   }
 
-  // Parse dates as local dates (add time component to avoid UTC interpretation)
-  const start = new Date(startDate + "T00:00:00");
-  const end = new Date(endDate + "T00:00:00");
+  // Parse dates as UTC midnight for consistent storage
+  const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+  const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+  const start = new Date(Date.UTC(startYear, startMonth - 1, startDay, 0, 0, 0, 0));
+  const end = new Date(Date.UTC(endYear, endMonth - 1, endDay, 0, 0, 0, 0));
 
   if (start > end) {
     return { success: false, error: "End date must be after or same as start date" };

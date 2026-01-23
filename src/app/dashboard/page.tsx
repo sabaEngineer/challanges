@@ -23,21 +23,21 @@ export default async function DashboardPage() {
     getMyActiveChallengesForToday(),
   ]);
   
-  // Normalize dates for comparison (ignore time component)
+  // Use UTC for consistent date handling in production
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   
   const activeChallenges = myChallenges.filter((c) => {
     const start = new Date(c.startDate);
-    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
     const end = new Date(c.endDate);
-    const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-    return today >= startDay && today <= endDay;
+    const endUTC = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+    return todayUTC >= startUTC && todayUTC <= endUTC;
   });
   const upcomingChallenges = myChallenges.filter((c) => {
     const start = new Date(c.startDate);
-    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-    return today < startDay;
+    const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+    return todayUTC < startUTC;
   });
 
   // Transform today's challenges for the component

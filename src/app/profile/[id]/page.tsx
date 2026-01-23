@@ -100,9 +100,9 @@ export default async function UserProfilePage({ params }: PageProps) {
   const isOwnProfile = currentUser?.id === id;
 
   const { user, stats, recentChallenges } = profile;
-  // Normalize dates for comparison (ignore time component)
+  // Use UTC for consistent date handling in production
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const rankTitle = getRankTitle(points.totalPoints);
 
   return (
@@ -211,11 +211,11 @@ export default async function UserProfilePage({ params }: PageProps) {
             <div className="space-y-3">
               {recentChallenges.map((challenge) => {
                 const start = new Date(challenge.startDate);
-                const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+                const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
                 const end = new Date(challenge.endDate);
-                const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-                const isActive = today >= startDay && today <= endDay;
-                const isEnded = today > endDay;
+                const endUTC = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+                const isActive = todayUTC >= startUTC && todayUTC <= endUTC;
+                const isEnded = todayUTC > endUTC;
 
                 return (
                   <Link

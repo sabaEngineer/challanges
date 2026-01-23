@@ -98,22 +98,20 @@ export async function createOrUpdateCheckin(
     return { success: false, error: "Challenge not found" };
   }
 
-  // Parse date as local date to avoid timezone issues
-  const checkinDate = new Date(date + "T12:00:00"); // Use noon to avoid edge cases
-  checkinDate.setHours(0, 0, 0, 0);
+  // Parse date as UTC for consistent handling in production
+  const [year, month, day] = date.split('-').map(Number);
+  const checkinDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
   
-  // Compare dates by extracting date parts (handles @db.Date columns properly)
-  const checkinDay = new Date(checkinDate.getFullYear(), checkinDate.getMonth(), checkinDate.getDate());
-  
+  // Compare dates using UTC (handles @db.Date columns properly)
   const start = new Date(challenge.startDate);
-  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
   
   const end = new Date(challenge.endDate);
-  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  const endUTC = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
 
   // Allow check-in only within challenge dates
-  if (checkinDay < startDay || checkinDay > endDay) {
-    return { success: false, error: `Check-in date must be within challenge dates (${startDay.toDateString()} - ${endDay.toDateString()})` };
+  if (checkinDate < startUTC || checkinDate > endUTC) {
+    return { success: false, error: `Check-in date must be within challenge dates (${startUTC.toDateString()} - ${endUTC.toDateString()})` };
   }
 
   // Check if all items are done
@@ -272,18 +270,18 @@ export async function getTodayCheckin(challengeId: string) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  // Use date range to handle timezone issues with @db.Date columns
+  // Use UTC for consistent date handling in production
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+  const endOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
   return db.dailyCheckin.findFirst({
     where: {
       challengeId,
       userId: user.id,
       checkinDate: {
-        gte: startOfToday,
-        lte: endOfToday,
+        gte: startOfTodayUTC,
+        lte: endOfTodayUTC,
       },
     },
     include: {
@@ -300,18 +298,18 @@ export async function getCheckinForDate(challengeId: string, date: string) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  // Parse the date string as local date and create a range
-  const parsedDate = new Date(date + "T00:00:00");
-  const startOfDay = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate(), 0, 0, 0, 0);
-  const endOfDay = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate(), 23, 59, 59, 999);
+  // Parse date as UTC for consistent handling
+  const [year, month, day] = date.split('-').map(Number);
+  const startOfDayUTC = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+  const endOfDayUTC = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
 
   return db.dailyCheckin.findFirst({
     where: {
       challengeId,
       userId: user.id,
       checkinDate: {
-        gte: startOfDay,
-        lte: endOfDay,
+        gte: startOfDayUTC,
+        lte: endOfDayUTC,
       },
     },
     include: {
@@ -348,11 +346,10 @@ export async function getMyActiveChallengesForToday() {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  // Use end of day for startDate comparison and start of day for endDate
-  // This ensures challenges starting "today" are included regardless of timezone
+  // Use UTC for consistent date handling in production
   const now = new Date();
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+  const endOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
   // Get active challenges where user is a member
   const memberships = await db.challengeMember.findMany({
@@ -360,8 +357,8 @@ export async function getMyActiveChallengesForToday() {
       userId: user.id,
       status: "active",
       challenge: {
-        startDate: { lte: endOfToday },
-        endDate: { gte: startOfToday },
+        startDate: { lte: endOfTodayUTC },
+        endDate: { gte: startOfTodayUTC },
       },
     },
     include: {
@@ -372,8 +369,8 @@ export async function getMyActiveChallengesForToday() {
             where: {
               userId: user.id,
               checkinDate: {
-                gte: startOfToday,
-                lte: endOfToday,
+                gte: startOfTodayUTC,
+                lte: endOfTodayUTC,
               },
             },
             include: {

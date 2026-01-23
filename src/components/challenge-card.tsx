@@ -37,17 +37,17 @@ export function ChallengeCard({
   requirements = [],
   memberCount = 0,
 }: ChallengeCardProps) {
-  // Normalize dates for comparison (ignore time component)
+  // Use UTC for consistent date handling in production
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const start = new Date(startDate);
-  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
   const end = new Date(endDate);
-  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  const endUTC = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
   
-  const isActive = today >= startDay && today <= endDay;
-  const isUpcoming = today < startDay;
-  const isOneTime = startDay.getTime() === endDay.getTime();
+  const isActive = todayUTC >= startUTC && todayUTC <= endUTC;
+  const isUpcoming = todayUTC < startUTC;
+  const isOneTime = startUTC.getTime() === endUTC.getTime();
 
   const formatDate = (date: Date) =>
     new Date(date).toLocaleDateString("en-US", {

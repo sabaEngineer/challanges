@@ -42,33 +42,33 @@ export function ChallengeListItem({
   requirements = [],
   memberCount = 0,
 }: ChallengeListItemProps) {
-  // Normalize dates for comparison (ignore time component)
+  // Use UTC for consistent date handling in production
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const start = new Date(startDate);
-  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
   const end = new Date(endDate);
-  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  const endUTC = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
   
-  const isActive = today >= startDay && today <= endDay;
-  const isUpcoming = today < startDay;
-  const isEnded = today > endDay;
-  const isOneTime = startDay.getTime() === endDay.getTime();
+  const isActive = todayUTC >= startUTC && todayUTC <= endUTC;
+  const isUpcoming = todayUTC < startUTC;
+  const isEnded = todayUTC > endUTC;
+  const isOneTime = startUTC.getTime() === endUTC.getTime();
 
   // Calculate progress for active challenges
-  const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const totalDays = Math.ceil((endUTC.getTime() - startUTC.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const daysElapsed = isUpcoming
     ? 0
     : Math.min(
-        Math.ceil((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1,
+        Math.ceil((todayUTC.getTime() - startUTC.getTime()) / (1000 * 60 * 60 * 24)) + 1,
         totalDays
       );
   const progressPercent = isOneTime ? (isEnded ? 100 : 0) : Math.round((daysElapsed / totalDays) * 100);
 
   // Days remaining or until start
   const daysRemaining = isUpcoming
-    ? Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-    : Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    ? Math.ceil((startUTC.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24))
+    : Math.max(0, Math.ceil((endUTC.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24)));
 
   const formatDate = (date: Date) =>
     new Date(date).toLocaleDateString("en-US", {
