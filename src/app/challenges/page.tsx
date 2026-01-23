@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FilterTabs } from "./filter-tabs";
 
+// Force dynamic rendering to avoid caching issues
+export const dynamic = 'force-dynamic';
+
 interface PageProps {
   searchParams: Promise<{ filter?: string }>;
 }
@@ -21,12 +24,31 @@ export default async function ChallengesPage({ searchParams }: PageProps) {
   const now = new Date();
   const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   
+  // Debug logging for production
+  console.log("=== DATE DEBUG ===");
+  console.log("Server now:", now.toISOString());
+  console.log("Server todayUTC:", todayUTC.toISOString());
+  if (challenges.length > 0) {
+    const c = challenges[0];
+    console.log("First challenge:", c.title);
+    console.log("  startDate raw:", c.startDate);
+    console.log("  startDate ISO:", new Date(c.startDate).toISOString());
+    console.log("  endDate raw:", c.endDate);
+    console.log("  endDate ISO:", new Date(c.endDate).toISOString());
+  }
+  console.log("==================");
+  
   const activeChallenges = challenges.filter((c) => {
     const start = new Date(c.startDate);
     const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
     const end = new Date(c.endDate);
     const endUTC = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
-    return todayUTC >= startUTC && todayUTC <= endUTC;
+    
+    const isActive = todayUTC >= startUTC && todayUTC <= endUTC;
+    // Debug each challenge's status
+    console.log(`Challenge "${c.title}": todayUTC=${todayUTC.toISOString()}, startUTC=${startUTC.toISOString()}, endUTC=${endUTC.toISOString()}, isActive=${isActive}`);
+    
+    return isActive;
   });
   const upcomingChallenges = challenges.filter((c) => {
     const start = new Date(c.startDate);

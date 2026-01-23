@@ -17,6 +17,9 @@ import {
   ChallengeUnit,
 } from "@/lib/types";
 
+// Force dynamic rendering to avoid caching issues
+export const dynamic = 'force-dynamic';
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }

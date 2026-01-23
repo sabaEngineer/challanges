@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { InvitationCard } from "@/components/invitation-card";
 
+// Force dynamic rendering to avoid caching issues
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
   const user = await getCurrentUser();
 
