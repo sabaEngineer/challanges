@@ -17,10 +17,26 @@ export default async function LeaderboardPage() {
 
   const userRank = user ? await getUserRank(user.id) : null;
 
+  // Debug: get raw count from DB
+  const { db } = await import("@/lib/db");
+  const debugData = await db.dailyCheckin.findMany({
+    where: { isDone: true },
+    select: { userId: true, id: true },
+  });
+  const allUsers = await db.user.count();
+
   return (
     <div className="min-h-screen px-4 py-8">
       <div className="max-w-3xl mx-auto">
         <BackButton fallbackHref="/feed" label="Back" />
+        
+        {/* DEBUG INFO - REMOVE LATER */}
+        <div className="mb-4 p-3 bg-red-900/30 border border-red-500 rounded text-xs text-red-300">
+          <p>DEBUG: Total users in DB: {allUsers}</p>
+          <p>DEBUG: Checkins with isDone=true: {debugData.length}</p>
+          <p>DEBUG: Unique users with done checkins: {new Set(debugData.map(d => d.userId)).size}</p>
+          <p>DEBUG: Leaderboard entries returned: {leaderboard.length}</p>
+        </div>
         
         {/* Header */}
         <div className="text-center mb-8">
