@@ -67,7 +67,15 @@ export function CheckinModal({
     return initial;
   });
 
-  const today = date || new Date().toISOString().split("T")[0];
+  // Get today's date in local timezone (not UTC) for check-in
+  const getLocalDateString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const today = date || getLocalDateString();
 
   // Calculate progress percentage for a requirement
   const getProgress = (req: Requirement, item: { value: string; isDone: boolean }) => {

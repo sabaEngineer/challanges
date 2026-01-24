@@ -98,20 +98,21 @@ export async function createOrUpdateCheckin(
     return { success: false, error: "Challenge not found" };
   }
 
-  // Parse date as UTC for consistent handling in production
+  // Parse date string (YYYY-MM-DD) from client - this is the user's local date
   const [year, month, day] = date.split('-').map(Number);
   const checkinDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
   
-  // Compare dates using UTC (handles @db.Date columns properly)
+  // Get challenge date boundaries
   const start = new Date(challenge.startDate);
-  const startUTC = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+  const startDay = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
   
   const end = new Date(challenge.endDate);
-  const endUTC = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+  const endDay = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
 
-  // Allow check-in only within challenge dates
-  if (checkinDate < startUTC || checkinDate > endUTC) {
-    return { success: false, error: `Check-in date must be within challenge dates (${startUTC.toDateString()} - ${endUTC.toDateString()})` };
+  // Allow check-in within challenge dates (comparing date parts only)
+  if (checkinDate < startDay || checkinDate > endDay) {
+    const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return { success: false, error: `Check-in date (${formatDate(checkinDate)}) must be within challenge dates (${formatDate(startDay)} - ${formatDate(endDay)})` };
   }
 
   // Check if all items are done
