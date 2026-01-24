@@ -43,13 +43,6 @@ export async function getLeaderboard(limit: number = 50): Promise<LeaderboardUse
     },
   });
 
-  // Debug logging
-  console.log("=== LEADERBOARD DEBUG ===");
-  console.log("Total users found:", users.length);
-  users.forEach((u) => {
-    console.log(`User ${u.fullName || u.username || u.id}: checkins=${u.dailyCheckins.length}, members=${u.challengeMembers.length}`);
-  });
-
   // Calculate points for each user
   const usersWithPoints = users.map((user) => {
     // Count completed challenges (ended challenges where user is active member)
@@ -76,8 +69,6 @@ export async function getLeaderboard(limit: number = 50): Promise<LeaderboardUse
     );
 
     const totalPoints = challengePoints + checkinPoints;
-
-    console.log(`User ${user.fullName}: checkinPoints=${checkinPoints}, challengePoints=${challengePoints}, totalPoints=${totalPoints}`);
 
     return {
       id: user.id,
@@ -109,9 +100,6 @@ export async function getLeaderboard(limit: number = 50): Promise<LeaderboardUse
       return { ...user, rank: currentRank };
     })
     .slice(0, limit);
-
-  console.log("Ranked users count:", rankedUsers.length);
-  console.log("=========================");
 
   return rankedUsers;
 }
