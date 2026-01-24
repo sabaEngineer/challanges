@@ -6,6 +6,9 @@ import { BackButton } from "@/components/back-button";
 import { getRankTitle, formatPoints, POINTS, POINTS_LABEL } from "@/lib/points";
 import { getEarnedBadges } from "@/lib/badges";
 
+// Force dynamic rendering to show real-time data
+export const dynamic = 'force-dynamic';
+
 export default async function LeaderboardPage() {
   const [user, leaderboard] = await Promise.all([
     getCurrentUser(),
