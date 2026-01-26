@@ -10,6 +10,7 @@ import { BackButton } from "@/components/back-button";
 import { MembersList } from "@/components/members-list";
 import { JoinButton } from "./join-button";
 import { CheckinButton } from "./checkin-button";
+import { AddDefaultRequirementButton } from "./add-requirement-button";
 import {
   challengeTypeLabels,
   challengeUnitLabels,
@@ -436,6 +437,11 @@ export default async function ChallengePage({ params }: PageProps) {
                 isMember={isMember}
                 currentStreak={currentUserMembership?.currentStreak || 0}
               />
+            )}
+
+            {/* Fix missing requirements - only for owner */}
+            {isOwner && challenge.requirements.length === 0 && !isEnded && (
+              <AddDefaultRequirementButton challengeId={id} />
             )}
 
             {/* Members / Leaderboard */}

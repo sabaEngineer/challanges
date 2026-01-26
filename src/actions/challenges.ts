@@ -67,6 +67,11 @@ export async function createChallenge(
     index++;
   }
 
+  // If no requirements provided, add a default "yes/no" requirement
+  const finalRequirements = requirements.length > 0 
+    ? requirements 
+    : [{ title: "Complete daily goal", type: "yes_no" as ChallengeType, targetValue: null, unit: "none" as ChallengeUnit }];
+
   const challenge = await db.challenge.create({
     data: {
       title,
@@ -75,14 +80,14 @@ export async function createChallenge(
       startDate: start,
       endDate: end,
       createdBy: user.id,
-      requirements: requirements.length > 0 ? {
-        create: requirements.map((req) => ({
+      requirements: {
+        create: finalRequirements.map((req) => ({
           title: req.title || null,
           type: req.type as PrismaChallengeType,
           targetValue: req.type !== "yes_no" && req.targetValue ? parseFloat(req.targetValue) : null,
           unit: req.unit as PrismaChallengeUnit,
         })),
-      } : undefined,
+      },
       // Auto-add creator as active member
       members: {
         create: {
@@ -333,4 +338,51 @@ export async function getMyChallenges() {
     ...c,
     myMembership: c.members[0] || null,
   }));
+}
+
+/**
+ * Add a default requirement to a challenge that has no requirements.
+ * This fixes existing challenges that were created without requirements.
+ */
+export async function addDefaultRequirement(challengeId: string): Promise<ActionResult> {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const challenge = await db.challenge.findUnique({
+    where: { id: challengeId },
+    include: { requirements: true },
+  });
+
+  if (!challenge) {
+    return { success: false, error: "Challenge not found" };
+  }
+
+  // Only the creator can add requirements
+  if (challenge.createdBy !== user.id) {
+    return { success: false, error: "Only the challenge creator can modify this" };
+  }
+
+  // Only add if no requirements exist
+  if (challenge.requirements.length > 0) {
+    return { success: false, error: "Challenge already has requirements" };
+  }
+
+  await db.challengeRequirement.create({
+    data: {
+      challengeId,
+      title: "Complete daily goal",
+      type: "yes_no",
+      targetValue: null,
+      unit: "none",
+    },
+  });
+
+  revalidatePath(`/challenges/${challengeId}`);
+  revalidatePath("/challenges");
+  revalidatePath("/dashboard");
+
+  return { success: true };
 }
