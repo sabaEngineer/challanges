@@ -208,24 +208,25 @@ async function updateStreak(challengeId: string, userId: string) {
     return;
   }
 
-  // Calculate current streak
-  let currentStreak = 0;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Calculate current streak with timezone offset (UTC+4 for Georgia)
+  const TIMEZONE_OFFSET_HOURS = 4;
+  const now = new Date();
+  const adjustedNow = new Date(now.getTime() + TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000);
+  const today = new Date(Date.UTC(adjustedNow.getUTCFullYear(), adjustedNow.getUTCMonth(), adjustedNow.getUTCDate()));
   
   const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
 
-  // Sort dates descending
+  // Sort dates descending - normalize to UTC midnight
   const sortedDates = checkins
     .map((c) => {
       const d = new Date(c.checkinDate);
-      d.setHours(0, 0, 0, 0);
-      return d;
+      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
     })
     .sort((a, b) => b.getTime() - a.getTime());
 
   // Check if most recent checkin is today or yesterday
+  let currentStreak = 0;
   const mostRecent = sortedDates[0];
   if (mostRecent.getTime() !== today.getTime() && mostRecent.getTime() !== yesterday.getTime()) {
     // Streak is broken
@@ -237,7 +238,7 @@ async function updateStreak(challengeId: string, userId: string) {
       if (date.getTime() === expectedDate.getTime()) {
         currentStreak++;
         expectedDate = new Date(expectedDate);
-        expectedDate.setDate(expectedDate.getDate() - 1);
+        expectedDate.setUTCDate(expectedDate.getUTCDate() - 1);
       } else if (date.getTime() < expectedDate.getTime()) {
         // Gap in dates, streak is broken
         break;
