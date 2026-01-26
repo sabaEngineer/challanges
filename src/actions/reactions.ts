@@ -13,24 +13,33 @@ export async function toggleReaction(checkinId: string, type: ReactionType) {
   }
 
   try {
-    // Check if reaction already exists
-    const existingReaction = await db.postReaction.findUnique({
+    // Check if user already has ANY reaction on this post
+    const existingReactions = await db.postReaction.findMany({
       where: {
-        checkinId_userId_type: {
-          checkinId,
-          userId: user.id,
-          type,
-        },
+        checkinId,
+        userId: user.id,
       },
     });
 
-    if (existingReaction) {
-      // Remove reaction
+    const sameTypeReaction = existingReactions.find((r) => r.type === type);
+
+    if (sameTypeReaction) {
+      // User clicked the same reaction - remove it
       await db.postReaction.delete({
-        where: { id: existingReaction.id },
+        where: { id: sameTypeReaction.id },
       });
     } else {
-      // Add reaction
+      // User wants a different reaction
+      // First, remove any existing reactions
+      if (existingReactions.length > 0) {
+        await db.postReaction.deleteMany({
+          where: {
+            checkinId,
+            userId: user.id,
+          },
+        });
+      }
+      // Then add the new reaction
       await db.postReaction.create({
         data: {
           checkinId,
@@ -81,40 +90,61 @@ export async function getPostReactions(checkinId: string) {
   };
 }
 
+export interface ReactionUser {
+  id: string;
+  fullName: string | null;
+  username: string | null;
+  avatarUrl: string | null;
+}
+
+export interface ReactionWithUsers {
+  counts: Record<ReactionType, number>;
+  userReacted: ReactionType[];
+  reactors: Record<ReactionType, ReactionUser[]>;
+}
+
 export async function getMultiplePostReactions(checkinIds: string[]) {
   const user = await getCurrentUser();
 
-  const reactions = await db.postReaction.groupBy({
-    by: ["checkinId", "type"],
+  // Get all reactions with user info
+  const allReactions = await db.postReaction.findMany({
     where: { checkinId: { in: checkinIds } },
-    _count: { type: true },
+    select: {
+      checkinId: true,
+      type: true,
+      user: {
+        select: {
+          id: true,
+          fullName: true,
+          username: true,
+          avatarUrl: true,
+        },
+      },
+    },
   });
 
-  const userReactions = user
-    ? await db.postReaction.findMany({
-        where: { checkinId: { in: checkinIds }, userId: user.id },
-        select: { checkinId: true, type: true },
-      })
-    : [];
-
-  const result: Record<string, { counts: Record<ReactionType, number>; userReacted: ReactionType[] }> = {};
+  const result: Record<string, ReactionWithUsers> = {};
 
   checkinIds.forEach((id) => {
     result[id] = {
       counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0 },
       userReacted: [],
+      reactors: { fire: [], strong: [], kudos: [], not_bad: [] },
     };
   });
 
-  reactions.forEach((r) => {
+  allReactions.forEach((r) => {
+    const type = r.type as ReactionType;
     if (result[r.checkinId]) {
-      result[r.checkinId].counts[r.type as ReactionType] = r._count.type;
-    }
-  });
-
-  userReactions.forEach((r) => {
-    if (result[r.checkinId]) {
-      result[r.checkinId].userReacted.push(r.type as ReactionType);
+      result[r.checkinId].counts[type]++;
+      result[r.checkinId].reactors[type].push(r.user);
+      
+      // Track if current user reacted
+      if (user && r.user.id === user.id) {
+        if (!result[r.checkinId].userReacted.includes(type)) {
+          result[r.checkinId].userReacted.push(type);
+        }
+      }
     }
   });
 

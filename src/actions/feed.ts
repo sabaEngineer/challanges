@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { getMultiplePostReactions, type ReactionType } from "./reactions";
+import { getMultiplePostReactions, type ReactionType, type ReactionWithUsers, type ReactionUser } from "./reactions";
 import { getMultipleCommentCounts } from "./comments";
 
 // Helper to get completed challenges count for multiple users
@@ -102,7 +102,7 @@ export async function getFeedPosts(limit: number = 20, offset: number = 0) {
         getMultipleCommentCounts(checkinIds),
         getUsersCompletedChallenges(userIds),
       ])
-    : [{} as Record<string, { counts: Record<ReactionType, number>; userReacted: ReactionType[] }>, {} as Record<string, number>, {} as Record<string, number>];
+    : [{} as Record<string, ReactionWithUsers>, {} as Record<string, number>, {} as Record<string, number>];
 
   return sortedCheckins.map((checkin) => ({
     id: checkin.id,
@@ -131,6 +131,7 @@ export async function getFeedPosts(limit: number = 20, offset: number = 0) {
     reactions: reactionsMap[checkin.id] || {
       counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0 } as Record<ReactionType, number>,
       userReacted: [] as ReactionType[],
+      reactors: { fire: [], strong: [], kudos: [], not_bad: [] } as Record<ReactionType, ReactionUser[]>,
     },
     commentCount: commentCounts[checkin.id] || 0,
   }));

@@ -21,6 +21,13 @@ interface Comment {
   isOwn: boolean;
 }
 
+interface ReactionUser {
+  id: string;
+  fullName: string | null;
+  username: string | null;
+  avatarUrl: string | null;
+}
+
 interface FeedPostProps {
   id: string;
   user: {
@@ -55,6 +62,7 @@ interface FeedPostProps {
   initialReactions?: {
     counts: Record<ReactionType, number>;
     userReacted: ReactionType[];
+    reactors?: Record<ReactionType, ReactionUser[]>;
   };
   initialCommentCount?: number;
 }
@@ -82,7 +90,8 @@ export function FeedPost({
   const [isPending, startTransition] = useTransition();
   const [reactions, setReactions] = useState(initialReactions || {
     counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0 },
-    userReacted: [],
+    userReacted: [] as ReactionType[],
+    reactors: { fire: [], strong: [], kudos: [], not_bad: [] } as Record<ReactionType, ReactionUser[]>,
   });
   
   // Comments state
@@ -128,30 +137,53 @@ export function FeedPost({
   };
 
   const handleReaction = (type: ReactionType) => {
-    const isCurrentlyReacted = reactions.userReacted.includes(type);
+    const currentReaction = reactions.userReacted[0]; // User can only have one reaction
+    const isRemovingReaction = currentReaction === type;
     
-    setReactions((prev) => ({
-      counts: {
-        ...prev.counts,
-        [type]: isCurrentlyReacted ? prev.counts[type] - 1 : prev.counts[type] + 1,
-      },
-      userReacted: isCurrentlyReacted
-        ? prev.userReacted.filter((r) => r !== type)
-        : [...prev.userReacted, type],
-    }));
+    // Optimistic update
+    setReactions((prev) => {
+      const newCounts = { ...prev.counts };
+      
+      // Remove old reaction if exists
+      if (currentReaction) {
+        newCounts[currentReaction] = Math.max(0, newCounts[currentReaction] - 1);
+      }
+      
+      // Add new reaction if not removing
+      if (!isRemovingReaction) {
+        newCounts[type] = newCounts[type] + 1;
+      }
+      
+      return {
+        ...prev,
+        counts: newCounts,
+        userReacted: isRemovingReaction ? [] : [type],
+      };
+    });
 
     startTransition(async () => {
       const result = await toggleReaction(id, type);
       if (result.error) {
-        setReactions((prev) => ({
-          counts: {
-            ...prev.counts,
-            [type]: isCurrentlyReacted ? prev.counts[type] + 1 : prev.counts[type] - 1,
-          },
-          userReacted: isCurrentlyReacted
-            ? [...prev.userReacted, type]
-            : prev.userReacted.filter((r) => r !== type),
-        }));
+        // Revert on error
+        setReactions((prev) => {
+          const newCounts = { ...prev.counts };
+          
+          // Undo: re-add old reaction
+          if (currentReaction) {
+            newCounts[currentReaction] = newCounts[currentReaction] + 1;
+          }
+          
+          // Undo: remove new reaction
+          if (!isRemovingReaction) {
+            newCounts[type] = Math.max(0, newCounts[type] - 1);
+          }
+          
+          return {
+            ...prev,
+            counts: newCounts,
+            userReacted: currentReaction ? [currentReaction] : [],
+          };
+        });
       }
     });
   };
@@ -392,21 +424,59 @@ export function FeedPost({
           {REACTIONS.map((reaction) => {
             const isReacted = reactions.userReacted.includes(reaction.type);
             const count = reactions.counts[reaction.type];
+            const reactors = reactions.reactors?.[reaction.type] || [];
             
             return (
-              <button
-                key={reaction.type}
-                onClick={() => handleReaction(reaction.type)}
-                disabled={isPending}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all text-sm ${
-                  isReacted
-                    ? `bg-slate-700/50 ${reaction.activeColor}`
-                    : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-300"
-                } ${isPending ? "opacity-50" : ""}`}
-              >
-                <span>{reaction.emoji}</span>
-                {count > 0 && <span>{count}</span>}
-              </button>
+              <div key={reaction.type} className="relative group">
+                <button
+                  onClick={() => handleReaction(reaction.type)}
+                  disabled={isPending}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all text-sm ${
+                    isReacted
+                      ? `bg-slate-700/50 ${reaction.activeColor}`
+                      : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-300"
+                  } ${isPending ? "opacity-50" : ""}`}
+                >
+                  <span>{reaction.emoji}</span>
+                  {count > 0 && <span>{count}</span>}
+                </button>
+                
+                {/* Tooltip showing who reacted */}
+                {reactors.length > 0 && (
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
+                    <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl min-w-max max-w-[200px]">
+                      <p className="text-xs text-slate-400 mb-1.5">{reaction.label}</p>
+                      <div className="space-y-1">
+                        {reactors.slice(0, 5).map((reactor) => (
+                          <div key={reactor.id} className="flex items-center gap-2">
+                            {reactor.avatarUrl ? (
+                              <img
+                                src={reactor.avatarUrl}
+                                alt=""
+                                className="w-4 h-4 rounded-full"
+                              />
+                            ) : (
+                              <div className="w-4 h-4 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-[8px] font-bold">
+                                {(reactor.fullName || "U").charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <span className="text-xs text-white truncate">
+                              {reactor.fullName || reactor.username || "Anonymous"}
+                            </span>
+                          </div>
+                        ))}
+                        {reactors.length > 5 && (
+                          <p className="text-xs text-slate-500">+{reactors.length - 5} more</p>
+                        )}
+                      </div>
+                      {/* Arrow */}
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
+                        <div className="border-8 border-transparent border-t-slate-700" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
