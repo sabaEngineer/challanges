@@ -35,6 +35,7 @@ export async function getFeedPosts(limit: number = 20, offset: number = 0) {
   const user = await getCurrentUser();
 
   // Get recent check-ins with user and challenge info
+  // Fetch more to allow for sorting, then slice
   const checkins = await db.dailyCheckin.findMany({
     where: {
       isDone: true, // Only show completed check-ins
@@ -64,13 +65,36 @@ export async function getFeedPosts(limit: number = 20, offset: number = 0) {
     orderBy: {
       createdAt: "desc",
     },
-    take: limit,
-    skip: offset,
+    take: limit + offset + 50, // Fetch extra for better sorting
   });
 
+  // Sort to prioritize posts with images and notes, but within same day grouping
+  // This ensures recent posts don't get buried by older posts with images
+  const sortedCheckins = checkins.sort((a, b) => {
+    // First, group by day (most recent day first)
+    const dayA = new Date(a.createdAt).toDateString();
+    const dayB = new Date(b.createdAt).toDateString();
+    
+    if (dayA !== dayB) {
+      // Different days: newer day first
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+    
+    // Same day: prioritize posts with image+note
+    const scoreA = (a.imageUrl ? 1 : 0) + (a.note ? 1 : 0);
+    const scoreB = (b.imageUrl ? 1 : 0) + (b.note ? 1 : 0);
+    
+    if (scoreA !== scoreB) {
+      return scoreB - scoreA; // Higher score first
+    }
+    
+    // Same score on same day: sort by time desc
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  }).slice(offset, offset + limit);
+
   // Get reactions, comment counts, and user badges for all checkins
-  const checkinIds = checkins.map((c) => c.id);
-  const userIds = checkins.map((c) => c.userId);
+  const checkinIds = sortedCheckins.map((c) => c.id);
+  const userIds = sortedCheckins.map((c) => c.userId);
   
   const [reactionsMap, commentCounts, userCompletedChallenges] = checkinIds.length > 0 
     ? await Promise.all([
@@ -80,7 +104,7 @@ export async function getFeedPosts(limit: number = 20, offset: number = 0) {
       ])
     : [{} as Record<string, { counts: Record<ReactionType, number>; userReacted: ReactionType[] }>, {} as Record<string, number>, {} as Record<string, number>];
 
-  return checkins.map((checkin) => ({
+  return sortedCheckins.map((checkin) => ({
     id: checkin.id,
     user: {
       ...checkin.user,
