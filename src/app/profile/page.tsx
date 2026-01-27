@@ -2,12 +2,14 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { logout } from "@/actions/auth";
+import { getUserActivityHistory } from "@/actions/profile";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { BadgeShowcase } from "@/components/badge-display";
 import { BackButton } from "@/components/back-button";
 import { ProfileHeader } from "./profile-header";
+import { ActivityCalendar } from "@/components/activity-calendar";
 import { getUserPoints, getUserRank } from "@/actions/leaderboard";
 import { getRankTitle, formatPoints, POINTS_LABEL } from "@/lib/points";
 
@@ -52,10 +54,11 @@ export default async function ProfilePage() {
     redirect("/login");
   }
 
-  const [stats, points, rank] = await Promise.all([
+  const [stats, points, rank, activityHistory] = await Promise.all([
     getUserStats(user.id),
     getUserPoints(user.id),
     getUserRank(user.id),
+    getUserActivityHistory(user.id),
   ]);
 
   const rankTitle = getRankTitle(points.totalPoints);
@@ -127,6 +130,11 @@ export default async function ProfilePage() {
           <h2 className="text-lg font-semibold text-white mb-6">🏅 Badges & Achievements</h2>
           <BadgeShowcase completedChallenges={stats.challengesCompleted} />
         </Card>
+
+        {/* Activity Calendar */}
+        <div className="mb-8">
+          <ActivityCalendar activities={activityHistory} />
+        </div>
 
         {/* Account Section */}
         <Card>

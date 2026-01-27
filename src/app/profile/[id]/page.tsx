@@ -2,9 +2,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getUserActivityHistory } from "@/actions/profile";
 import { Card } from "@/components/ui/card";
 import { BadgeShowcase } from "@/components/badge-display";
 import { BackButton } from "@/components/back-button";
+import { ActivityCalendar } from "@/components/activity-calendar";
 import { getUserPoints, getUserRank } from "@/actions/leaderboard";
 import { getRankTitle, formatPoints, POINTS_LABEL } from "@/lib/points";
 
@@ -85,11 +87,12 @@ async function getUserProfile(userId: string) {
 
 export default async function UserProfilePage({ params }: PageProps) {
   const { id } = await params;
-  const [currentUser, profile, points, rank] = await Promise.all([
+  const [currentUser, profile, points, rank, activityHistory] = await Promise.all([
     getCurrentUser(),
     getUserProfile(id),
     getUserPoints(id),
     getUserRank(id),
+    getUserActivityHistory(id),
   ]);
 
   if (!profile) {
@@ -205,6 +208,11 @@ export default async function UserProfilePage({ params }: PageProps) {
           <h2 className="text-lg font-semibold text-white mb-6">🏅 Badges & Achievements</h2>
           <BadgeShowcase completedChallenges={stats.challengesCompleted} />
         </Card>
+
+        {/* Activity Calendar */}
+        <div className="mb-8">
+          <ActivityCalendar activities={activityHistory} />
+        </div>
 
         {/* Recent Challenges */}
         {recentChallenges.length > 0 && (

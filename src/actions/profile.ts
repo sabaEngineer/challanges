@@ -5,6 +5,74 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
 
+export async function getUserActivityHistory(userId: string, months: number = 6) {
+  // Get check-ins from the last N months
+  const startDate = new Date();
+  startDate.setMonth(startDate.getMonth() - months);
+  startDate.setHours(0, 0, 0, 0);
+
+  const checkins = await db.dailyCheckin.findMany({
+    where: {
+      userId,
+      checkinDate: { gte: startDate },
+    },
+    select: {
+      id: true,
+      checkinDate: true,
+      isDone: true,
+      note: true,
+      imageUrl: true,
+      createdAt: true,
+      challenge: {
+        select: {
+          id: true,
+          title: true,
+          imageUrl: true,
+        },
+      },
+      items: {
+        select: {
+          id: true,
+          value: true,
+          isDone: true,
+          requirement: {
+            select: {
+              id: true,
+              title: true,
+              type: true,
+              targetValue: true,
+              unit: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { checkinDate: "desc" },
+  });
+
+  return checkins.map((c) => ({
+    id: c.id,
+    checkinDate: c.checkinDate.toISOString(),
+    isDone: c.isDone,
+    note: c.note,
+    imageUrl: c.imageUrl,
+    createdAt: c.createdAt.toISOString(),
+    challenge: c.challenge,
+    items: c.items.map((item) => ({
+      id: item.id,
+      value: item.value?.toString() || null,
+      isDone: item.isDone,
+      requirement: {
+        id: item.requirement.id,
+        title: item.requirement.title,
+        type: item.requirement.type,
+        targetValue: item.requirement.targetValue?.toString() || null,
+        unit: item.requirement.unit,
+      },
+    })),
+  }));
+}
+
 export async function updateAvatar(avatarUrl: string): Promise<ActionResult> {
   const user = await getCurrentUser();
 
