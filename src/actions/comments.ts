@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { createNotification } from "./notifications";
 
 export async function createComment(checkinId: string, content: string) {
   const user = await getCurrentUser();
@@ -15,6 +16,30 @@ export async function createComment(checkinId: string, content: string) {
   }
 
   try {
+    // Get the checkin with its owner and challenge info
+    const checkin = await db.dailyCheckin.findUnique({
+      where: { id: checkinId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            username: true,
+          },
+        },
+        challenge: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    if (!checkin) {
+      return { error: "Post not found" };
+    }
+
     const comment = await db.postComment.create({
       data: {
         checkinId,
@@ -32,6 +57,71 @@ export async function createComment(checkinId: string, content: string) {
         },
       },
     });
+
+    // Get all users who have commented on this post (except current user)
+    const existingCommenters = await db.postComment.findMany({
+      where: {
+        checkinId,
+        userId: { not: user.id },
+      },
+      select: {
+        userId: true,
+      },
+      distinct: ["userId"],
+    });
+
+    const commenterName = user.username ? `@${user.username}` : user.fullName || "Someone";
+    const postOwnerName = checkin.user.username ? `@${checkin.user.username}` : checkin.user.fullName || "Someone";
+    
+    // Collect unique user IDs to notify (excluding current user)
+    const usersToNotify = new Set<string>();
+
+    // 1. Notify the post owner if it's not the commenter
+    if (checkin.userId !== user.id) {
+      usersToNotify.add(checkin.userId);
+    }
+
+    // 2. Notify other commenters (excluding post owner who was already added, and current user)
+    existingCommenters.forEach((commenter) => {
+      if (commenter.userId !== checkin.userId) {
+        usersToNotify.add(commenter.userId);
+      }
+    });
+
+    // Send notifications
+    const notifications = [];
+
+    // Notification to post owner
+    if (usersToNotify.has(checkin.userId)) {
+      notifications.push(
+        createNotification({
+          userId: checkin.userId,
+          type: "new_comment",
+          title: "New Comment",
+          message: `${commenterName} commented on your check-in: "${content.slice(0, 50)}${content.length > 50 ? "..." : ""}"`,
+          challengeId: checkin.challenge.id,
+          checkinId: checkin.id,
+        })
+      );
+      usersToNotify.delete(checkin.userId);
+    }
+
+    // Notifications to other commenters
+    for (const userId of usersToNotify) {
+      notifications.push(
+        createNotification({
+          userId,
+          type: "comment_reply",
+          title: "New Reply",
+          message: `${commenterName} also commented on ${postOwnerName}'s check-in: "${content.slice(0, 50)}${content.length > 50 ? "..." : ""}"`,
+          challengeId: checkin.challenge.id,
+          checkinId: checkin.id,
+        })
+      );
+    }
+
+    // Execute all notifications in parallel
+    await Promise.all(notifications);
 
     revalidatePath("/feed");
     return { 

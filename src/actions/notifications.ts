@@ -19,6 +19,11 @@ export async function getNotifications() {
           imageUrl: true,
         },
       },
+      checkin: {
+        select: {
+          id: true,
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
     take: 20,
@@ -103,10 +108,11 @@ export async function deleteNotification(notificationId: string): Promise<Action
 // Helper function to create a notification (used by other actions)
 export async function createNotification(data: {
   userId: string;
-  type: "challenge_invitation" | "invitation_accepted" | "invitation_rejected" | "challenge_started" | "challenge_ended";
+  type: "challenge_invitation" | "invitation_accepted" | "invitation_rejected" | "challenge_started" | "challenge_ended" | "member_checkin" | "new_comment" | "comment_reply";
   title: string;
   message: string;
   challengeId?: string;
+  checkinId?: string;
 }) {
   return db.notification.create({
     data: {
@@ -115,6 +121,7 @@ export async function createNotification(data: {
       title: data.title,
       message: data.message,
       challengeId: data.challengeId,
+      checkinId: data.checkinId,
     },
   });
 }

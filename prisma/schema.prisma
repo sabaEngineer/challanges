@@ -68,6 +68,8 @@ enum NotificationType {
   challenge_started
   challenge_ended
   member_checkin
+  new_comment
+  comment_reply
 
   @@map("notification_type")
 }
@@ -140,11 +142,13 @@ model Notification {
   title       String
   message     String
   challengeId String?          @map("challenge_id")
+  checkinId   String?          @map("checkin_id")
   read        Boolean          @default(false)
   createdAt   DateTime         @default(now()) @map("created_at")
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  challenge Challenge? @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge Challenge?    @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  checkin   DailyCheckin? @relation(fields: [checkinId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }
@@ -159,11 +163,12 @@ model DailyCheckin {
   isDone      Boolean  @default(false) @map("is_done")
   createdAt   DateTime @default(now()) @map("created_at")
 
-  challenge Challenge          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items     DailyCheckinItem[]
-  reactions PostReaction[]
-  comments  PostComment[]
+  challenge     Challenge          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items         DailyCheckinItem[]
+  reactions     PostReaction[]
+  comments      PostComment[]
+  notifications Notification[]
 
   @@unique([challengeId, userId, checkinDate])
   @@map("daily_checkins")
