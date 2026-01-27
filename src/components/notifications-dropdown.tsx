@@ -18,6 +18,7 @@ interface Notification {
   read: boolean;
   createdAt: Date;
   challengeId?: string | null;
+  checkinId?: string | null;
   challenge?: {
     id: string;
     title: string;
@@ -127,6 +128,12 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
         return "🚀";
       case "challenge_ended":
         return "🏁";
+      case "new_comment":
+        return "💬";
+      case "comment_reply":
+        return "↩️";
+      case "member_checkin":
+        return "✓";
       default:
         return "🔔";
     }
@@ -285,8 +292,27 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
                             </div>
                           )}
 
+                        {/* View link for comment notifications */}
+                        {(notification.type === "new_comment" || notification.type === "comment_reply") &&
+                          notification.checkinId && (
+                            <Link
+                              href={`/feed/${notification.checkinId}`}
+                              onClick={() => {
+                                if (!notification.read) {
+                                  handleMarkAsRead(notification.id);
+                                }
+                                setIsOpen(false);
+                              }}
+                              className="inline-block mt-2 text-xs text-amber-400 hover:text-amber-300 transition-colors"
+                            >
+                              View Post →
+                            </Link>
+                          )}
+
                         {/* View link for other notification types */}
                         {notification.type !== "challenge_invitation" &&
+                          notification.type !== "new_comment" &&
+                          notification.type !== "comment_reply" &&
                           notification.challengeId && (
                             <Link
                               href={`/challenges/${notification.challengeId}`}

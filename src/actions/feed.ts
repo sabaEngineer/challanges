@@ -258,3 +258,76 @@ export async function getChallengeFeed(challengeId: string, limit: number = 20) 
   }));
 }
 
+export async function getSinglePost(postId: string) {
+  const user = await getCurrentUser();
+
+  const checkin = await db.dailyCheckin.findUnique({
+    where: { id: postId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          fullName: true,
+          username: true,
+          avatarUrl: true,
+        },
+      },
+      challenge: {
+        select: {
+          id: true,
+          title: true,
+          imageUrl: true,
+        },
+      },
+      items: {
+        include: {
+          requirement: true,
+        },
+      },
+    },
+  });
+
+  if (!checkin) return null;
+
+  // Get reactions and comment count
+  const [reactionsData, commentCount, completedChallenges] = await Promise.all([
+    getMultiplePostReactions([checkin.id]),
+    getMultipleCommentCounts([checkin.id]),
+    getUsersCompletedChallenges([checkin.userId]),
+  ]);
+
+  const reactions = reactionsData[checkin.id] || {
+    counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0 } as Record<ReactionType, number>,
+    userReacted: [] as ReactionType[],
+    reactors: { fire: [], strong: [], kudos: [], not_bad: [] } as Record<ReactionType, ReactionUser[]>,
+  };
+
+  return {
+    id: checkin.id,
+    user: {
+      ...checkin.user,
+      completedChallenges: completedChallenges[checkin.userId] || 0,
+    },
+    challenge: checkin.challenge,
+    checkinDate: checkin.checkinDate,
+    note: checkin.note,
+    imageUrl: checkin.imageUrl,
+    createdAt: checkin.createdAt,
+    items: checkin.items.map((item) => ({
+      id: item.id,
+      value: item.value ? Number(item.value) : null,
+      isDone: item.isDone,
+      requirement: {
+        id: item.requirement.id,
+        title: item.requirement.title,
+        type: item.requirement.type,
+        targetValue: item.requirement.targetValue ? Number(item.requirement.targetValue) : null,
+        unit: item.requirement.unit,
+      },
+    })),
+    isOwnPost: user?.id === checkin.userId,
+    reactions,
+    commentCount: commentCount[checkin.id] || 0,
+  };
+}
+

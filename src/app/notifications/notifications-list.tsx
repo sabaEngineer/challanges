@@ -286,9 +286,10 @@ export function NotificationsList({ initialNotifications }: NotificationsListPro
                     )}
 
                   {/* View link for comment notifications */}
-                  {(notification.type === "new_comment" || notification.type === "comment_reply") && (
+                  {(notification.type === "new_comment" || notification.type === "comment_reply") && 
+                    notification.checkinId && (
                     <Link
-                      href="/feed"
+                      href={`/feed/${notification.checkinId}`}
                       onClick={() => {
                         if (!notification.read) {
                           handleMarkAsRead(notification.id);
@@ -296,7 +297,7 @@ export function NotificationsList({ initialNotifications }: NotificationsListPro
                       }}
                       className="inline-block mt-3 text-sm text-amber-400 hover:text-amber-300 transition-colors"
                     >
-                      View in Feed →
+                      View Post →
                     </Link>
                   )}
 
