@@ -19,10 +19,16 @@ interface Notification {
   createdAt: Date;
   challengeId?: string | null;
   checkinId?: string | null;
+  bookId?: string | null;
   challenge?: {
     id: string;
     title: string;
     imageUrl?: string | null;
+  } | null;
+  book?: {
+    id: string;
+    title: string;
+    coverUrl?: string | null;
   } | null;
 }
 
@@ -100,6 +106,14 @@ export function NotificationsList({ initialNotifications }: NotificationsListPro
         return "↩️";
       case "member_checkin":
         return "✓";
+      case "book_request":
+        return "📚";
+      case "book_request_accepted":
+        return "✅";
+      case "book_request_rejected":
+        return "❌";
+      case "book_returned":
+        return "📥";
       default:
         return "🔔";
     }
@@ -301,10 +315,33 @@ export function NotificationsList({ initialNotifications }: NotificationsListPro
                     </Link>
                   )}
 
+                  {/* View link for book notifications */}
+                  {(notification.type === "book_request" ||
+                    notification.type === "book_request_accepted" ||
+                    notification.type === "book_request_rejected" ||
+                    notification.type === "book_returned") &&
+                    notification.bookId && (
+                      <Link
+                        href={`/books/${notification.bookId}`}
+                        onClick={() => {
+                          if (!notification.read) {
+                            handleMarkAsRead(notification.id);
+                          }
+                        }}
+                        className="inline-block mt-3 text-sm text-amber-400 hover:text-amber-300 transition-colors"
+                      >
+                        View Book →
+                      </Link>
+                    )}
+
                   {/* View link for other notification types */}
                   {notification.type !== "challenge_invitation" &&
                     notification.type !== "new_comment" &&
                     notification.type !== "comment_reply" &&
+                    notification.type !== "book_request" &&
+                    notification.type !== "book_request_accepted" &&
+                    notification.type !== "book_request_rejected" &&
+                    notification.type !== "book_returned" &&
                     notification.challengeId && (
                       <Link
                         href={`/challenges/${notification.challengeId}`}

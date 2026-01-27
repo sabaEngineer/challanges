@@ -3,7 +3,9 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getUserActivityHistory } from "@/actions/profile";
+import { getUserBooksForProfile } from "@/actions/books";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { BadgeShowcase } from "@/components/badge-display";
 import { BackButton } from "@/components/back-button";
 import { ActivityCalendar } from "@/components/activity-calendar";
@@ -87,12 +89,13 @@ async function getUserProfile(userId: string) {
 
 export default async function UserProfilePage({ params }: PageProps) {
   const { id } = await params;
-  const [currentUser, profile, points, rank, activityHistory] = await Promise.all([
+  const [currentUser, profile, points, rank, activityHistory, books] = await Promise.all([
     getCurrentUser(),
     getUserProfile(id),
     getUserPoints(id),
     getUserRank(id),
     getUserActivityHistory(id),
+    getUserBooksForProfile(id),
   ]);
 
   if (!profile) {
@@ -213,6 +216,45 @@ export default async function UserProfilePage({ params }: PageProps) {
         <div className="mb-8">
           <ActivityCalendar activities={activityHistory} />
         </div>
+
+        {/* Books Section */}
+        {books.length > 0 && (
+          <Card className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <span>📚</span> Books
+              </h2>
+              <Link href={`/books/user/${id}`}>
+                <Button variant="outline" size="sm">
+                  View All
+                </Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {books.map((book) => (
+                <Link key={book.id} href={`/books/${book.id}`}>
+                  <div className="group flex flex-col items-center p-3 rounded-xl hover:bg-slate-800/50 transition-colors">
+                    <div className="w-16 h-22 rounded-lg overflow-hidden bg-slate-800 mb-2 group-hover:ring-2 ring-amber-500/50 transition-all">
+                      {book.coverUrl ? (
+                        <img
+                          src={book.coverUrl}
+                          alt={book.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-2xl">
+                          📖
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-white text-center truncate w-full">{book.title}</p>
+                    <p className="text-xs text-slate-500 truncate w-full text-center">{book.author}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* Recent Challenges */}
         {recentChallenges.length > 0 && (

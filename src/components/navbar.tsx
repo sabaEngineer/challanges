@@ -45,6 +45,12 @@ export async function Navbar() {
                   Feed
                 </Link>
                 <Link
+                  href="/books"
+                  className="text-slate-300 hover:text-white transition-colors text-sm"
+                >
+                  Books
+                </Link>
+                <Link
                   href="/dashboard"
                   className="text-slate-300 hover:text-white transition-colors text-sm"
                 >

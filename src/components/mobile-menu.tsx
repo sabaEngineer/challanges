@@ -92,6 +92,14 @@ export function MobileMenu({ isLoggedIn, userAvatar, userName }: MobileMenuProps
                     <span className="text-slate-200">Leaderboard</span>
                   </Link>
                   <Link
+                    href="/books"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    <span className="text-xl">📚</span>
+                    <span className="text-slate-200">Books</span>
+                  </Link>
+                  <Link
                     href="/dashboard"
                     onClick={() => setIsOpen(false)}
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 transition-colors"

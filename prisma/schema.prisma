@@ -23,6 +23,9 @@ model User {
   dailyCheckins    DailyCheckin[]
   reactions        PostReaction[]
   comments         PostComment[]
+  books            Book[]            @relation("BookOwner")
+  borrowedBooks    Book[]            @relation("BookBorrower")
+  bookRequests     BookLendRequest[] @relation("BookRequester")
 
   @@map("users")
 }
@@ -70,6 +73,10 @@ enum NotificationType {
   member_checkin
   new_comment
   comment_reply
+  book_request
+  book_request_accepted
+  book_request_rejected
+  book_returned
 
   @@map("notification_type")
 }
@@ -143,12 +150,14 @@ model Notification {
   message     String
   challengeId String?          @map("challenge_id")
   checkinId   String?          @map("checkin_id")
+  bookId      String?          @map("book_id")
   read        Boolean          @default(false)
   createdAt   DateTime         @default(now()) @map("created_at")
 
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   challenge Challenge?    @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   checkin   DailyCheckin? @relation(fields: [checkinId], references: [id], onDelete: Cascade)
+  book      Book?         @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }
@@ -215,4 +224,61 @@ model PostComment {
   user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("post_comments")
+}
+
+// Book ownership type
+enum BookOwnershipType {
+  physical      // User owns a physical copy - can be lent
+  digital       // User owns digital/online version - just recommendation
+  recommendation // User doesn't own but recommends - just recommendation
+
+  @@map("book_ownership_type")
+}
+
+// Book lend request status
+enum BookLendStatus {
+  pending
+  accepted
+  rejected
+  returned
+
+  @@map("book_lend_status")
+}
+
+model Book {
+  id            String            @id @default(uuid())
+  title         String
+  author        String
+  description   String?           @db.Text
+  coverUrl      String?           @map("cover_url") @db.Text
+  language      String            @default("all") // "all", "en", "ka", "ru", etc.
+  genre         String?           // fiction, non-fiction, mystery, romance, sci-fi, etc.
+  ownershipType BookOwnershipType @map("ownership_type")
+  userId        String            @map("user_id")
+  lentToUserId  String?           @map("lent_to_user_id")
+  lentAt        DateTime?         @map("lent_at")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @default(now()) @updatedAt @map("updated_at")
+
+  owner         User              @relation("BookOwner", fields: [userId], references: [id], onDelete: Cascade)
+  borrower      User?             @relation("BookBorrower", fields: [lentToUserId], references: [id], onDelete: SetNull)
+  requests      BookLendRequest[]
+  notifications Notification[]
+
+  @@map("books")
+}
+
+model BookLendRequest {
+  id          String         @id @default(uuid())
+  bookId      String         @map("book_id")
+  requesterId String         @map("requester_id")
+  status      BookLendStatus @default(pending)
+  message     String?        @db.Text
+  createdAt   DateTime       @default(now()) @map("created_at")
+  respondedAt DateTime?      @map("responded_at")
+
+  book      Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  requester User @relation("BookRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+
+  @@map("book_lend_requests")
 }

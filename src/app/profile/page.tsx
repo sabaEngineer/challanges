@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { logout } from "@/actions/auth";
 import { getUserActivityHistory } from "@/actions/profile";
+import { getUserBooksForProfile } from "@/actions/books";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { db } from "@/lib/db";
@@ -54,11 +55,12 @@ export default async function ProfilePage() {
     redirect("/login");
   }
 
-  const [stats, points, rank, activityHistory] = await Promise.all([
+  const [stats, points, rank, activityHistory, books] = await Promise.all([
     getUserStats(user.id),
     getUserPoints(user.id),
     getUserRank(user.id),
     getUserActivityHistory(user.id),
+    getUserBooksForProfile(user.id),
   ]);
 
   const rankTitle = getRankTitle(points.totalPoints);
@@ -135,6 +137,64 @@ export default async function ProfilePage() {
         <div className="mb-8">
           <ActivityCalendar activities={activityHistory} />
         </div>
+
+        {/* Books Section */}
+        <Card className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <span>📚</span> My Books
+            </h2>
+            <div className="flex gap-2">
+              <Link href={`/books/user/${user.id}`}>
+                <Button variant="outline" size="sm">
+                  Share List
+                </Button>
+              </Link>
+              <Link href="/books/my">
+                <Button size="sm">Manage</Button>
+              </Link>
+            </div>
+          </div>
+          {books.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-slate-400 mb-3">No books shared yet</p>
+              <Link href="/books/new">
+                <Button size="sm" variant="outline">Add a Book</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {books.map((book) => (
+                <Link key={book.id} href={`/books/${book.id}`}>
+                  <div className="group flex flex-col items-center p-3 rounded-xl hover:bg-slate-800/50 transition-colors">
+                    <div className="w-16 h-22 rounded-lg overflow-hidden bg-slate-800 mb-2 group-hover:ring-2 ring-amber-500/50 transition-all">
+                      {book.coverUrl ? (
+                        <img
+                          src={book.coverUrl}
+                          alt={book.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-2xl">
+                          📖
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-white text-center truncate w-full">{book.title}</p>
+                    <p className="text-xs text-slate-500 truncate w-full text-center">{book.author}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+          {books.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-slate-800">
+              <Link href="/books/my" className="text-sm text-amber-400 hover:text-amber-300">
+                View all books →
+              </Link>
+            </div>
+          )}
+        </Card>
 
         {/* Account Section */}
         <Card>

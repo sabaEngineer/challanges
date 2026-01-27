@@ -24,6 +24,13 @@ export async function getNotifications() {
           id: true,
         },
       },
+      book: {
+        select: {
+          id: true,
+          title: true,
+          coverUrl: true,
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
     take: 20,
@@ -108,11 +115,12 @@ export async function deleteNotification(notificationId: string): Promise<Action
 // Helper function to create a notification (used by other actions)
 export async function createNotification(data: {
   userId: string;
-  type: "challenge_invitation" | "invitation_accepted" | "invitation_rejected" | "challenge_started" | "challenge_ended" | "member_checkin" | "new_comment" | "comment_reply";
+  type: "challenge_invitation" | "invitation_accepted" | "invitation_rejected" | "challenge_started" | "challenge_ended" | "member_checkin" | "new_comment" | "comment_reply" | "book_request" | "book_request_accepted" | "book_request_rejected" | "book_returned";
   title: string;
   message: string;
   challengeId?: string;
   checkinId?: string;
+  bookId?: string;
 }) {
   return db.notification.create({
     data: {
@@ -122,6 +130,7 @@ export async function createNotification(data: {
       message: data.message,
       challengeId: data.challengeId,
       checkinId: data.checkinId,
+      bookId: data.bookId,
     },
   });
 }

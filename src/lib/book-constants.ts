@@ -1,0 +1,24 @@
+export const BOOK_GENRES = [
+  { code: "fiction", label: "Fiction", emoji: "📖" },
+  { code: "non-fiction", label: "Non-Fiction", emoji: "📚" },
+  { code: "mystery", label: "Mystery & Thriller", emoji: "🔍" },
+  { code: "romance", label: "Romance", emoji: "💕" },
+  { code: "sci-fi", label: "Sci-Fi & Fantasy", emoji: "🚀" },
+  { code: "biography", label: "Biography & Memoir", emoji: "👤" },
+  { code: "self-help", label: "Self-Help", emoji: "💪" },
+  { code: "business", label: "Business & Finance", emoji: "💼" },
+  { code: "history", label: "History", emoji: "🏛️" },
+  { code: "science", label: "Science & Technology", emoji: "🔬" },
+  { code: "philosophy", label: "Philosophy", emoji: "🤔" },
+  { code: "psychology", label: "Psychology", emoji: "🧠" },
+  { code: "art", label: "Art & Design", emoji: "🎨" },
+  { code: "poetry", label: "Poetry", emoji: "✨" },
+  { code: "comics", label: "Comics & Manga", emoji: "💬" },
+  { code: "children", label: "Children's Books", emoji: "🧒" },
+  { code: "cooking", label: "Cooking & Food", emoji: "🍳" },
+  { code: "travel", label: "Travel", emoji: "✈️" },
+  { code: "horror", label: "Horror", emoji: "👻" },
+  { code: "other", label: "Other", emoji: "📕" },
+] as const;
+
+export type BookGenre = typeof BOOK_GENRES[number]["code"];
