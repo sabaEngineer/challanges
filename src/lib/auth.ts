@@ -25,13 +25,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
 
         if (existingUser) {
-          // Update googleId and avatar if needed
+          // Update googleId but preserve custom avatar if user has one
+          // Only use Google avatar if user has no avatar set
           await db.user.update({
             where: { id: existingUser.id },
             data: {
               googleId: account.providerAccountId,
-              avatarUrl: user.image || existingUser.avatarUrl,
-              fullName: user.name || existingUser.fullName,
+              // Keep existing avatar - don't overwrite with Google's
+              avatarUrl: existingUser.avatarUrl || user.image,
+              fullName: existingUser.fullName || user.name,
             },
           });
 

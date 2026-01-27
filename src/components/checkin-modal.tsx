@@ -55,6 +55,7 @@ export function CheckinModal({
 }: CheckinModalProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [savedState, setSavedState] = useState<"none" | "partial" | "complete">("none");
   const [note, setNote] = useState(existingCheckin?.note || "");
   const [imageUrl, setImageUrl] = useState(existingCheckin?.imageUrl || "");
   const [items, setItems] = useState<Record<string, { value: string; isDone: boolean }>>(() => {
@@ -133,12 +134,25 @@ export function CheckinModal({
     }));
   };
 
-  const handleSubmit = () => {
-    const checkinItems = requirements.map((req) => ({
-      requirementId: req.id,
-      value: items[req.id].value ? parseFloat(items[req.id].value) : undefined,
-      isDone: items[req.id].isDone,
-    }));
+  const handleSubmit = (forceComplete = false) => {
+    const checkinItems = requirements.map((req) => {
+      const item = items[req.id];
+      // If forceComplete is true, mark all items as done
+      if (forceComplete) {
+        return {
+          requirementId: req.id,
+          value: item.value ? parseFloat(item.value) : (req.targetValue ? Number(req.targetValue) : undefined),
+          isDone: true,
+        };
+      }
+      return {
+        requirementId: req.id,
+        value: item.value ? parseFloat(item.value) : undefined,
+        isDone: item.isDone,
+      };
+    });
+
+    const willBeComplete = forceComplete || requirements.every((req) => items[req.id]?.isDone);
 
     startTransition(async () => {
       const result = await createOrUpdateCheckin(
@@ -154,13 +168,41 @@ export function CheckinModal({
         if (onStreakUpdate && result.streak !== undefined) {
           onStreakUpdate(result.streak);
         }
-        onClose();
-        // Force refresh to update all UI components with new data
-        router.refresh();
+        
+        if (willBeComplete) {
+          // If complete, close immediately
+          onClose();
+          router.refresh();
+        } else {
+          // If partial, show success state with option to complete
+          setSavedState("partial");
+          router.refresh();
+        }
       } else {
         alert(result.error);
       }
     });
+  };
+
+  const handleMarkComplete = () => {
+    // Update all items to be done with their current values (or target values if empty)
+    const updatedItems: Record<string, { value: string; isDone: boolean }> = {};
+    requirements.forEach((req) => {
+      const current = items[req.id];
+      updatedItems[req.id] = {
+        value: current.value || (req.targetValue?.toString() || ""),
+        isDone: true,
+      };
+    });
+    setItems(updatedItems);
+    
+    // Submit with forceComplete
+    handleSubmit(true);
+  };
+
+  const handleClose = () => {
+    setSavedState("none");
+    onClose();
   };
 
   const allDone = requirements.every((req) => items[req.id]?.isDone);
@@ -172,11 +214,85 @@ export function CheckinModal({
 
   if (!isOpen) return null;
 
+  // Show success screen after saving partial progress
+  if (savedState === "partial") {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div
+          className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+          onClick={handleClose}
+        />
+        <div className="relative bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md overflow-hidden">
+          <div className="p-8 text-center">
+            {/* Success Icon */}
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-blue-500/20 flex items-center justify-center">
+              <span className="text-4xl">💪</span>
+            </div>
+            
+            {/* Message */}
+            <h2 className="text-2xl font-bold text-white mb-2">Progress Saved!</h2>
+            <p className="text-slate-400 mb-6">
+              Great start! You&apos;ve logged {completedCount} of {requirements.length} tasks.
+              <br />
+              Come back when you&apos;re ready to finish!
+            </p>
+
+            {/* Progress Summary */}
+            <div className="bg-slate-800/50 rounded-xl p-4 mb-6">
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-slate-400">Today&apos;s Progress</span>
+                <span className="text-blue-400 font-medium">
+                  {Math.round((completedCount / requirements.length) * 100)}%
+                </span>
+              </div>
+              <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-300"
+                  style={{ width: `${(completedCount / requirements.length) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="space-y-3">
+              <Button
+                onClick={handleMarkComplete}
+                disabled={isPending}
+                className="w-full bg-emerald-500 hover:bg-emerald-600"
+              >
+                {isPending ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    <span className="mr-2">✓</span>
+                    I&apos;m Done - Mark as Complete
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleClose}
+                className="w-full"
+              >
+                Continue Later
+              </Button>
+            </div>
+
+            {/* Tip */}
+            <p className="text-xs text-slate-500 mt-4">
+              Tip: Completing all tasks earns you streak points!
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={handleClose}
       />
       <div className="relative bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
@@ -187,7 +303,7 @@ export function CheckinModal({
               <p className="text-sm text-slate-400 mt-1">{challengeTitle}</p>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -367,11 +483,11 @@ export function CheckinModal({
         {/* Footer */}
         <div className="p-6 border-t border-slate-800 bg-slate-900/80">
           <div className="flex gap-3">
-            <Button variant="outline" onClick={onClose} className="flex-1">
+            <Button variant="outline" onClick={handleClose} className="flex-1">
               Cancel
             </Button>
             <Button
-              onClick={handleSubmit}
+              onClick={() => handleSubmit(false)}
               disabled={isPending}
               className={`flex-1 ${
                 allDone
