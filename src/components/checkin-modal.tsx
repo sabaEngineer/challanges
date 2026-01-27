@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { createOrUpdateCheckin } from "@/actions/checkins";
 import { Button } from "./ui/button";
 import { ImageUploadCompact } from "./image-upload";
@@ -39,6 +40,7 @@ interface CheckinModalProps {
   requirements: Requirement[];
   existingCheckin?: ExistingCheckin | null;
   date?: string;
+  onStreakUpdate?: (newStreak: number) => void;
 }
 
 export function CheckinModal({
@@ -49,7 +51,9 @@ export function CheckinModal({
   requirements,
   existingCheckin,
   date,
+  onStreakUpdate,
 }: CheckinModalProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [note, setNote] = useState(existingCheckin?.note || "");
   const [imageUrl, setImageUrl] = useState(existingCheckin?.imageUrl || "");
@@ -146,7 +150,13 @@ export function CheckinModal({
       );
 
       if (result.success) {
+        // Update streak in parent component if callback provided
+        if (onStreakUpdate && result.streak !== undefined) {
+          onStreakUpdate(result.streak);
+        }
         onClose();
+        // Force refresh to update all UI components with new data
+        router.refresh();
       } else {
         alert(result.error);
       }

@@ -171,12 +171,14 @@ export async function createOrUpdateCheckin(
       console.log("Item created/updated:", checkinItem.id, "isDone:", checkinItem.isDone);
     }
 
-    // Update streak if all requirements are done for today
+    // Always update streak to ensure it's accurate (handles edits that make check-ins incomplete)
     console.log("All requirements done?", allDone);
+    console.log("Updating streak...");
+    const newStreak = await updateStreak(challengeId, user.id);
+    
+    // Send notifications only when completing a check-in (not on edits)
     if (allDone) {
-      console.log("All done! Updating streak and sending notifications...");
-      await updateStreak(challengeId, user.id);
-      
+      console.log("All done! Sending notifications...");
       // Send notifications to other active members
       await notifyChallengeMembersOfCheckin(challengeId, user.id, user.fullName || user.username || "Someone", challenge.title);
     }
@@ -185,14 +187,14 @@ export async function createOrUpdateCheckin(
     revalidatePath(`/challenges/${challengeId}`);
     revalidatePath("/dashboard");
     revalidatePath("/feed");
-    return { success: true };
+    return { success: true, streak: newStreak };
   } catch (error) {
     console.error("Check-in error:", error);
     return { success: false, error: `Failed to save check-in: ${error instanceof Error ? error.message : "Unknown error"}` };
   }
 }
 
-async function updateStreak(challengeId: string, userId: string) {
+async function updateStreak(challengeId: string, userId: string): Promise<number> {
   // Get all completed checkins for this user and challenge
   const checkins = await db.dailyCheckin.findMany({
     where: {
@@ -204,8 +206,15 @@ async function updateStreak(challengeId: string, userId: string) {
     select: { checkinDate: true },
   });
 
+  console.log(`[updateStreak] Found ${checkins.length} completed check-ins for user ${userId}`);
+
   if (checkins.length === 0) {
-    return;
+    // No completed check-ins, reset streak to 0
+    await db.challengeMember.update({
+      where: { challengeId_userId: { challengeId, userId } },
+      data: { currentStreak: 0 },
+    });
+    return 0;
   }
 
   // Calculate current streak with timezone offset (UTC+4 for Georgia)
@@ -217,34 +226,50 @@ async function updateStreak(challengeId: string, userId: string) {
   const yesterday = new Date(today);
   yesterday.setUTCDate(yesterday.getUTCDate() - 1);
 
-  // Sort dates descending - normalize to UTC midnight
-  const sortedDates = checkins
-    .map((c) => {
-      const d = new Date(c.checkinDate);
-      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-    })
-    .sort((a, b) => b.getTime() - a.getTime());
+  // Helper to normalize a date to midnight UTC (date only, no time component)
+  const normalizeDate = (d: Date): number => {
+    // Handle potential timezone issues from Prisma/PostgreSQL
+    const date = new Date(d);
+    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  };
+
+  // Get unique dates as timestamps, sorted descending (most recent first)
+  const uniqueDateTimestamps = [...new Set(checkins.map((c) => normalizeDate(c.checkinDate)))].sort((a, b) => b - a);
+  
+  console.log(`[updateStreak] Today: ${today.toISOString()}, Yesterday: ${yesterday.toISOString()}`);
+  console.log(`[updateStreak] Unique check-in dates: ${uniqueDateTimestamps.map(t => new Date(t).toISOString().split('T')[0]).join(', ')}`);
+
+  const todayTimestamp = today.getTime();
+  const yesterdayTimestamp = yesterday.getTime();
+  const mostRecentTimestamp = uniqueDateTimestamps[0];
+
+  console.log(`[updateStreak] Most recent check-in: ${new Date(mostRecentTimestamp).toISOString().split('T')[0]}`);
 
   // Check if most recent checkin is today or yesterday
   let currentStreak = 0;
-  const mostRecent = sortedDates[0];
-  if (mostRecent.getTime() !== today.getTime() && mostRecent.getTime() !== yesterday.getTime()) {
-    // Streak is broken
+  if (mostRecentTimestamp !== todayTimestamp && mostRecentTimestamp !== yesterdayTimestamp) {
+    // Most recent check-in is older than yesterday - streak is broken
+    console.log(`[updateStreak] Streak broken - most recent check-in is not today or yesterday`);
     currentStreak = 0;
   } else {
-    // Count consecutive days
-    let expectedDate = mostRecent;
-    for (const date of sortedDates) {
-      if (date.getTime() === expectedDate.getTime()) {
+    // Count consecutive days starting from the most recent
+    let expectedTimestamp = mostRecentTimestamp;
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+    
+    for (const dateTimestamp of uniqueDateTimestamps) {
+      if (dateTimestamp === expectedTimestamp) {
         currentStreak++;
-        expectedDate = new Date(expectedDate);
-        expectedDate.setUTCDate(expectedDate.getUTCDate() - 1);
-      } else if (date.getTime() < expectedDate.getTime()) {
-        // Gap in dates, streak is broken
+        expectedTimestamp = expectedTimestamp - ONE_DAY_MS; // Go back one day
+      } else if (dateTimestamp < expectedTimestamp) {
+        // There's a gap in dates, streak is broken
+        console.log(`[updateStreak] Gap found: expected ${new Date(expectedTimestamp).toISOString().split('T')[0]}, got ${new Date(dateTimestamp).toISOString().split('T')[0]}`);
         break;
       }
+      // If dateTimestamp > expectedTimestamp, skip it (shouldn't happen with sorted array)
     }
   }
+
+  console.log(`[updateStreak] Calculated streak: ${currentStreak}`);
 
   // Get current member record to compare best streak
   const member = await db.challengeMember.findUnique({
@@ -266,6 +291,10 @@ async function updateStreak(challengeId: string, userId: string) {
       bestStreak: newBestStreak,
     },
   });
+  
+  console.log(`[updateStreak] Updated streak to ${currentStreak}, best: ${newBestStreak}`);
+  
+  return currentStreak;
 }
 
 export async function getTodayCheckin(challengeId: string) {
@@ -601,6 +630,7 @@ export async function quickCheckin(
     include: { requirements: true },
   });
 
+  let newStreak = 0;
   if (challenge) {
     const allItems = await db.dailyCheckinItem.findMany({
       where: { checkinId: checkin.id },
@@ -615,13 +645,12 @@ export async function quickCheckin(
       data: { isDone: allDone },
     });
 
-    if (allDone) {
-      await updateStreak(challengeId, user.id);
-    }
+    // Always update streak to keep it accurate
+    newStreak = await updateStreak(challengeId, user.id);
   }
 
   revalidatePath(`/challenges/${challengeId}`);
   revalidatePath("/dashboard");
-  return { success: true };
+  return { success: true, streak: newStreak };
 }
 

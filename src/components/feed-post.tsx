@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
@@ -102,6 +102,29 @@ export function FeedPost({
   const [newComment, setNewComment] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
+  
+  // State for mobile-friendly reaction tooltip
+  const [activeReactionTooltip, setActiveReactionTooltip] = useState<ReactionType | null>(null);
+  const [showAllReactorsModal, setShowAllReactorsModal] = useState(false);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
+        setActiveReactionTooltip(null);
+      }
+    };
+    
+    if (activeReactionTooltip) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+        document.removeEventListener("touchstart", handleClickOutside);
+      };
+    }
+  }, [activeReactionTooltip]);
 
   const completedItems = items.filter((item) => item.isDone).length;
   const totalItems = items.length;
@@ -396,7 +419,10 @@ export function FeedPost({
       {(totalReactions > 0 || commentCount > 0) && (
         <div className="px-4 py-2 border-t border-slate-700/50 flex items-center justify-between">
           {totalReactions > 0 ? (
-            <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAllReactorsModal(true)}
+              className="flex items-center gap-2 hover:bg-slate-800/30 rounded-full px-2 py-1 -mx-2 transition-colors"
+            >
               <div className="flex -space-x-1">
                 {REACTIONS.filter((r) => reactions.counts[r.type] > 0)
                   .slice(0, 3)
@@ -405,7 +431,7 @@ export function FeedPost({
                   ))}
               </div>
               <span className="text-sm text-slate-400">{totalReactions}</span>
-            </div>
+            </button>
           ) : <div />}
           {commentCount > 0 && (
             <button
@@ -418,6 +444,75 @@ export function FeedPost({
         </div>
       )}
 
+      {/* All Reactors Modal */}
+      {showAllReactorsModal && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowAllReactorsModal(false)}
+        >
+          <div 
+            className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-sm max-h-[70vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <h3 className="text-lg font-semibold text-white">Reactions</h3>
+              <button
+                onClick={() => setShowAllReactorsModal(false)}
+                className="text-slate-400 hover:text-white transition-colors p-1"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            {/* Modal Content */}
+            <div className="overflow-y-auto max-h-[calc(70vh-4rem)]">
+              {REACTIONS.map((reaction) => {
+                const reactors = reactions.reactors?.[reaction.type] || [];
+                if (reactors.length === 0) return null;
+                
+                return (
+                  <div key={reaction.type} className="border-b border-slate-800 last:border-b-0">
+                    <div className="px-4 py-2 bg-slate-800/50 flex items-center gap-2">
+                      <span className="text-lg">{reaction.emoji}</span>
+                      <span className="text-sm font-medium text-slate-300">{reaction.label}</span>
+                      <span className="text-xs text-slate-500">({reactors.length})</span>
+                    </div>
+                    <div className="divide-y divide-slate-800/50">
+                      {reactors.map((reactor) => (
+                        <Link
+                          key={reactor.id}
+                          href={`/profile/${reactor.id}`}
+                          onClick={() => setShowAllReactorsModal(false)}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-slate-800/30 transition-colors"
+                        >
+                          {reactor.avatarUrl ? (
+                            <img
+                              src={reactor.avatarUrl}
+                              alt=""
+                              className="w-8 h-8 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold">
+                              {(reactor.fullName || "U").charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="text-sm text-white">
+                            {reactor.fullName || reactor.username || "Anonymous"}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Post Footer - Reactions & Comment Button */}
       <div className="px-4 py-3 border-t border-slate-700/50 flex items-center justify-between">
         <div className="flex items-center gap-1">
@@ -425,9 +520,10 @@ export function FeedPost({
             const isReacted = reactions.userReacted.includes(reaction.type);
             const count = reactions.counts[reaction.type];
             const reactors = reactions.reactors?.[reaction.type] || [];
+            const isTooltipActive = activeReactionTooltip === reaction.type;
             
             return (
-              <div key={reaction.type} className="relative group">
+              <div key={reaction.type} className="relative group" ref={isTooltipActive ? tooltipRef : null}>
                 <button
                   onClick={() => handleReaction(reaction.type)}
                   disabled={isPending}
@@ -438,32 +534,67 @@ export function FeedPost({
                   } ${isPending ? "opacity-50" : ""}`}
                 >
                   <span>{reaction.emoji}</span>
-                  {count > 0 && <span>{count}</span>}
+                  {count > 0 && (
+                    <span 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (reactors.length > 0) {
+                          setActiveReactionTooltip(isTooltipActive ? null : reaction.type);
+                        }
+                      }}
+                      className="cursor-pointer hover:underline"
+                    >
+                      {count}
+                    </span>
+                  )}
                 </button>
                 
-                {/* Tooltip showing who reacted */}
+                {/* Tooltip showing who reacted - desktop hover + mobile tap */}
                 {reactors.length > 0 && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
+                  <div 
+                    className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 ${
+                      isTooltipActive ? 'block' : 'hidden group-hover:block'
+                    }`}
+                  >
                     <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl min-w-max max-w-[200px]">
-                      <p className="text-xs text-slate-400 mb-1.5">{reaction.label}</p>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-xs text-slate-400">{reaction.label}</p>
+                        {/* Close button for mobile */}
+                        {isTooltipActive && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveReactionTooltip(null);
+                            }}
+                            className="text-slate-500 hover:text-slate-300 text-xs ml-2"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
                       <div className="space-y-1">
                         {reactors.slice(0, 5).map((reactor) => (
-                          <div key={reactor.id} className="flex items-center gap-2">
+                          <Link
+                            key={reactor.id}
+                            href={`/profile/${reactor.id}`}
+                            onClick={() => setActiveReactionTooltip(null)}
+                            className="flex items-center gap-2 hover:bg-slate-700/50 rounded px-1 py-0.5 -mx-1"
+                          >
                             {reactor.avatarUrl ? (
                               <img
                                 src={reactor.avatarUrl}
                                 alt=""
-                                className="w-4 h-4 rounded-full"
+                                className="w-5 h-5 rounded-full"
                               />
                             ) : (
-                              <div className="w-4 h-4 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-[8px] font-bold">
+                              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-[8px] font-bold">
                                 {(reactor.fullName || "U").charAt(0).toUpperCase()}
                               </div>
                             )}
                             <span className="text-xs text-white truncate">
                               {reactor.fullName || reactor.username || "Anonymous"}
                             </span>
-                          </div>
+                          </Link>
                         ))}
                         {reactors.length > 5 && (
                           <p className="text-xs text-slate-500">+{reactors.length - 5} more</p>

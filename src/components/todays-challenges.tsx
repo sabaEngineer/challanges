@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CheckinModal } from "./checkin-modal";
 import { Card } from "./ui/card";
@@ -44,9 +45,24 @@ interface TodaysChallengesProps {
   challenges: TodayChallenge[];
 }
 
-export function TodaysChallenges({ challenges }: TodaysChallengesProps) {
+export function TodaysChallenges({ challenges: initialChallenges }: TodaysChallengesProps) {
+  const router = useRouter();
+  const [challenges, setChallenges] = useState(initialChallenges);
   const [selectedChallenge, setSelectedChallenge] = useState<TodayChallenge | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
+  
+  const handleStreakUpdate = (challengeId: string, newStreak: number) => {
+    // Update the streak locally for immediate UI feedback
+    setChallenges((prev) =>
+      prev.map((c) =>
+        c.id === challengeId
+          ? { ...c, membership: { ...c.membership, currentStreak: newStreak } }
+          : c
+      )
+    );
+    // Also refresh the page to get latest data
+    router.refresh();
+  };
 
   if (challenges.length === 0) {
     return null;
@@ -243,6 +259,7 @@ export function TodaysChallenges({ challenges }: TodaysChallengesProps) {
             imageUrl: null,
             items: selectedChallenge.todayCheckin.items,
           } : null}
+          onStreakUpdate={(newStreak) => handleStreakUpdate(selectedChallenge.id, newStreak)}
         />
       )}
     </>

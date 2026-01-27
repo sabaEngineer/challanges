@@ -82,6 +82,7 @@ export interface ActionResult<T = unknown> {
   success: boolean;
   error?: string;
   data?: T;
+  streak?: number;
 }
 
 // Helper for challenge type display

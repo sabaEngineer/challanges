@@ -47,13 +47,18 @@ export function CheckinButton({
   todayCheckin,
   isActive,
   isMember,
-  currentStreak = 0,
+  currentStreak: initialStreak = 0,
 }: CheckinButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentStreak, setCurrentStreak] = useState(initialStreak);
 
   if (!isMember || !isActive) {
     return null;
   }
+  
+  const handleStreakUpdate = (newStreak: number) => {
+    setCurrentStreak(newStreak);
+  };
 
   const completedCount = todayCheckin?.items.filter((i) => i.isDone).length || 0;
   const totalCount = requirements.length;
@@ -99,6 +104,7 @@ export function CheckinButton({
             imageUrl: todayCheckin.imageUrl,
             items: todayCheckin.items,
           } : null}
+          onStreakUpdate={handleStreakUpdate}
         />
       </>
     );
@@ -175,6 +181,7 @@ export function CheckinButton({
           imageUrl: todayCheckin.imageUrl,
           items: todayCheckin.items,
         } : null}
+        onStreakUpdate={handleStreakUpdate}
       />
     </>
   );
