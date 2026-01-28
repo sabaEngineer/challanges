@@ -185,6 +185,16 @@ export async function getPostComments(checkinId: string) {
           avatarUrl: true,
         },
       },
+      likes: {
+        select: {
+          userId: true,
+        },
+      },
+      _count: {
+        select: {
+          likes: true,
+        },
+      },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -195,6 +205,8 @@ export async function getPostComments(checkinId: string) {
     createdAt: comment.createdAt,
     user: comment.user,
     isOwn: user?.id === comment.userId,
+    likeCount: comment._count.likes,
+    isLiked: user ? comment.likes.some((like) => like.userId === user.id) : false,
   }));
 }
 
@@ -212,13 +224,18 @@ export async function getMultiplePostComments(checkinIds: string[]) {
           avatarUrl: true,
         },
       },
+      likes: {
+        select: {
+          userId: true,
+        },
+      },
+      _count: {
+        select: {
+          likes: true,
+        },
+      },
     },
     orderBy: { createdAt: "asc" },
-  });
-
-  const result: Record<string, typeof formattedComments> = {};
-  checkinIds.forEach((id) => {
-    result[id] = [];
   });
 
   const formattedComments = comments.map((comment) => ({
@@ -228,7 +245,14 @@ export async function getMultiplePostComments(checkinIds: string[]) {
     checkinId: comment.checkinId,
     user: comment.user,
     isOwn: user?.id === comment.userId,
+    likeCount: comment._count.likes,
+    isLiked: user ? comment.likes.some((like) => like.userId === user.id) : false,
   }));
+
+  const result: Record<string, typeof formattedComments> = {};
+  checkinIds.forEach((id) => {
+    result[id] = [];
+  });
 
   formattedComments.forEach((comment) => {
     if (result[comment.checkinId]) {
@@ -260,5 +284,46 @@ export async function getMultipleCommentCounts(checkinIds: string[]) {
   });
 
   return result;
+}
+
+export async function toggleCommentLike(commentId: string) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { error: "You must be logged in to like comments" };
+  }
+
+  try {
+    // Check if already liked
+    const existingLike = await db.commentLike.findUnique({
+      where: {
+        commentId_userId: {
+          commentId,
+          userId: user.id,
+        },
+      },
+    });
+
+    if (existingLike) {
+      // Unlike
+      await db.commentLike.delete({
+        where: { id: existingLike.id },
+      });
+      revalidatePath("/feed");
+      return { success: true, liked: false };
+    } else {
+      // Like
+      await db.commentLike.create({
+        data: {
+          commentId,
+          userId: user.id,
+        },
+      });
+      revalidatePath("/feed");
+      return { success: true, liked: true };
+    }
+  } catch (error) {
+    console.error("Error toggling comment like:", error);
+    return { error: "Failed to update like" };
+  }
 }
 

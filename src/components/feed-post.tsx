@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { toggleReaction, type ReactionType } from "@/actions/reactions";
-import { createComment, deleteComment, getPostComments } from "@/actions/comments";
+import { createComment, deleteComment, getPostComments, toggleCommentLike } from "@/actions/comments";
 import { getEarnedBadges } from "@/lib/badges";
 
 interface Comment {
@@ -19,6 +19,8 @@ interface Comment {
     avatarUrl: string | null;
   };
   isOwn: boolean;
+  likeCount: number;
+  isLiked: boolean;
 }
 
 interface ReactionUser {
@@ -278,7 +280,12 @@ export function FeedPost({
     try {
       const result = await createComment(id, newComment);
       if (result.success && result.comment) {
-        setComments((prev) => [...prev, result.comment as Comment]);
+        const newCommentData: Comment = {
+          ...result.comment as Comment,
+          likeCount: 0,
+          isLiked: false,
+        };
+        setComments((prev) => [...prev, newCommentData]);
         setCommentCount((prev) => prev + 1);
         setNewComment("");
       }
@@ -297,6 +304,41 @@ export function FeedPost({
       }
     } catch (error) {
       console.error("Failed to delete comment:", error);
+    }
+  };
+
+  const handleLikeComment = async (commentId: string) => {
+    // Optimistic update
+    setComments((prev) =>
+      prev.map((c) =>
+        c.id === commentId
+          ? {
+              ...c,
+              isLiked: !c.isLiked,
+              likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1,
+            }
+          : c
+      )
+    );
+
+    try {
+      const result = await toggleCommentLike(commentId);
+      if (result.error) {
+        // Revert on error
+        setComments((prev) =>
+          prev.map((c) =>
+            c.id === commentId
+              ? {
+                  ...c,
+                  isLiked: !c.isLiked,
+                  likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1,
+                }
+              : c
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to like comment:", error);
     }
   };
 
@@ -699,6 +741,17 @@ export function FeedPost({
                       <span className="text-xs text-slate-500">
                         {formatTimeAgo(comment.createdAt)}
                       </span>
+                      <button
+                        onClick={() => handleLikeComment(comment.id)}
+                        className={`flex items-center gap-1 text-xs transition-colors ${
+                          comment.isLiked
+                            ? "text-red-400"
+                            : "text-slate-500 hover:text-red-400"
+                        }`}
+                      >
+                        <span>{comment.isLiked ? "❤️" : "🤍"}</span>
+                        {comment.likeCount > 0 && <span>{comment.likeCount}</span>}
+                      </button>
                       {comment.isOwn && (
                         <button
                           onClick={() => handleDeleteComment(comment.id)}

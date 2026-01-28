@@ -31,6 +31,7 @@ model User {
   dailyCheckins    DailyCheckin[]
   reactions        PostReaction[]
   comments         PostComment[]
+  commentLikes     CommentLike[]
   books            Book[]            @relation("BookOwner")
   borrowedBooks    Book[]            @relation("BookBorrower")
   bookRequests     BookLendRequest[] @relation("BookRequester")
@@ -237,10 +238,24 @@ model PostComment {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  checkin DailyCheckin @relation(fields: [checkinId], references: [id], onDelete: Cascade)
-  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkin DailyCheckin  @relation(fields: [checkinId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes   CommentLike[]
 
   @@map("post_comments")
+}
+
+model CommentLike {
+  id        String   @id @default(uuid())
+  commentId String   @map("comment_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  comment PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@map("comment_likes")
 }
 
 // Book ownership type
