@@ -350,10 +350,28 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
                             </Link>
                           )}
 
+                        {/* View link for member checkin notifications */}
+                        {notification.type === "member_checkin" &&
+                          notification.checkinId && (
+                            <Link
+                              href={`/feed/${notification.checkinId}`}
+                              onClick={() => {
+                                if (!notification.read) {
+                                  handleMarkAsRead(notification.id);
+                                }
+                                setIsOpen(false);
+                              }}
+                              className="inline-block mt-2 text-xs text-amber-400 hover:text-amber-300 transition-colors"
+                            >
+                              View Post →
+                            </Link>
+                          )}
+
                         {/* View link for other notification types */}
                         {notification.type !== "challenge_invitation" &&
                           notification.type !== "new_comment" &&
                           notification.type !== "comment_reply" &&
+                          notification.type !== "member_checkin" &&
                           notification.type !== "book_request" &&
                           notification.type !== "book_request_accepted" &&
                           notification.type !== "book_request_rejected" &&

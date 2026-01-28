@@ -10,6 +10,7 @@ import type { ActionResult } from "@/lib/types";
  */
 async function notifyChallengeMembersOfCheckin(
   challengeId: string,
+  checkinId: string,
   completedByUserId: string,
   completedByName: string,
   challengeTitle: string
@@ -38,6 +39,7 @@ async function notifyChallengeMembersOfCheckin(
       title: "🔥 Teammate completed check-in!",
       message: `${completedByName} completed their daily check-in for "${challengeTitle}"`,
       challengeId,
+      checkinId,
     }));
 
     await db.notification.createMany({
@@ -180,7 +182,7 @@ export async function createOrUpdateCheckin(
     if (allDone) {
       console.log("All done! Sending notifications...");
       // Send notifications to other active members
-      await notifyChallengeMembersOfCheckin(challengeId, user.id, user.fullName || user.username || "Someone", challenge.title);
+      await notifyChallengeMembersOfCheckin(challengeId, checkin.id, user.id, user.fullName || user.username || "Someone", challenge.title);
     }
 
     console.log("Check-in complete! Revalidating paths...");
