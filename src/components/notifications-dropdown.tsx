@@ -196,7 +196,14 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50">
+        <>
+          {/* Mobile overlay */}
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            onClick={() => setIsOpen(false)}
+          />
+          {/* Dropdown - centered on mobile, right-aligned on desktop */}
+          <div className="fixed left-4 right-4 top-20 md:absolute md:left-auto md:right-0 md:top-auto md:mt-2 w-auto md:w-96 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 bg-slate-800/50">
             <h3 className="font-semibold text-white">Notifications</h3>
             {unreadCount > 0 && (
@@ -385,6 +392,7 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
             </div>
           )}
         </div>
+        </>
       )}
     </div>
   );

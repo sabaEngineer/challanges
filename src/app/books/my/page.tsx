@@ -27,7 +27,7 @@ export default async function MyBooksPage() {
     <div className="min-h-screen px-4 py-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <BackButton />
             <div>
@@ -35,13 +35,41 @@ export default async function MyBooksPage() {
               <p className="text-slate-400">Manage your book collection</p>
             </div>
           </div>
-          <Link href="/books/new">
-            <Button className="bg-gradient-to-r from-amber-500 to-orange-500">
-              <span className="mr-2">+</span>
-              Add Book
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href={`/books/user/${user.id}`}>
+              <Button variant="outline">
+                <span className="mr-2">🔗</span>
+                Share Books Publicly
+              </Button>
+            </Link>
+            <Link href="/books/new">
+              <Button className="bg-gradient-to-r from-amber-500 to-orange-500">
+                <span className="mr-2">+</span>
+                Add Book
+              </Button>
+            </Link>
+          </div>
         </div>
+
+        {/* Share Suggestion Card */}
+        {myBooks.length > 0 && (
+          <Card className="mb-6 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-violet-500/30">
+            <div className="flex items-center gap-4">
+              <div className="text-3xl">🔗</div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-white">Share your book list with friends!</h3>
+                <p className="text-sm text-slate-400">
+                  Get a public link to your book recommendations that anyone can view
+                </p>
+              </div>
+              <Link href={`/books/user/${user.id}`}>
+                <Button size="sm" className="bg-violet-500 hover:bg-violet-600">
+                  Get Public Link
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        )}
 
         {/* Pending Requests Received */}
         {booksWithPendingRequests.length > 0 && (
