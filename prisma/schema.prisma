@@ -50,6 +50,7 @@ enum ChallengeUnit {
   calories // nutrition challenges
   liters   // water intake
   workouts // gym session count
+  lari     // Georgian currency for savings challenges
   none     // for yes_no challenges
 
   @@map("challenge_unit")
