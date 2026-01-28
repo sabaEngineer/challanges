@@ -1,6 +1,7 @@
 export const BOOK_GENRES = [
   { code: "fiction", label: "Fiction", emoji: "📖" },
   { code: "non-fiction", label: "Non-Fiction", emoji: "📚" },
+  { code: "drama", label: "Drama", emoji: "🎭" },
   { code: "mystery", label: "Mystery & Thriller", emoji: "🔍" },
   { code: "romance", label: "Romance", emoji: "💕" },
   { code: "sci-fi", label: "Sci-Fi & Fantasy", emoji: "🚀" },
@@ -18,6 +19,8 @@ export const BOOK_GENRES = [
   { code: "cooking", label: "Cooking & Food", emoji: "🍳" },
   { code: "travel", label: "Travel", emoji: "✈️" },
   { code: "horror", label: "Horror", emoji: "👻" },
+  { code: "adventure", label: "Adventure", emoji: "🗺️" },
+  { code: "classic", label: "Classic Literature", emoji: "📜" },
   { code: "other", label: "Other", emoji: "📕" },
 ] as const;
 

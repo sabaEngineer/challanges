@@ -11,7 +11,7 @@ export type BookOwnershipType = "physical" | "digital" | "recommendation";
 // Get all books (feed) with optional genre filter
 export async function getAllBooks(genre?: string) {
   const books = await db.book.findMany({
-    where: genre ? { genre } : undefined,
+    where: genre ? { genres: { has: genre } } : undefined,
     include: {
       owner: {
         select: {
@@ -42,11 +42,13 @@ export async function getAllBooks(genre?: string) {
 // Get all unique genres that have books
 export async function getUsedGenres() {
   const books = await db.book.findMany({
-    where: { genre: { not: null } },
-    select: { genre: true },
-    distinct: ["genre"],
+    where: { genres: { isEmpty: false } },
+    select: { genres: true },
   });
-  return books.map((b) => b.genre).filter(Boolean) as string[];
+  
+  // Flatten all genres arrays and get unique values
+  const allGenres = books.flatMap((b) => b.genres);
+  return [...new Set(allGenres)];
 }
 
 // Get user's books
@@ -173,7 +175,7 @@ export async function addBook(data: {
   description?: string;
   coverUrl?: string;
   language?: string;
-  genre?: string;
+  genres?: string[];
   ownershipType: BookOwnershipType;
 }): Promise<ActionResult> {
   const user = await getCurrentUser();
@@ -189,7 +191,7 @@ export async function addBook(data: {
         description: data.description,
         coverUrl: data.coverUrl,
         language: data.language || "all",
-        genre: data.genre || null,
+        genres: data.genres || [],
         ownershipType: data.ownershipType,
         userId: user.id,
       },
@@ -212,7 +214,7 @@ export async function updateBook(
     description?: string;
     coverUrl?: string;
     language?: string;
-    genre?: string | null;
+    genres?: string[];
     ownershipType?: BookOwnershipType;
   }
 ): Promise<ActionResult> {
@@ -615,7 +617,7 @@ export async function getUserPublicBooks(userId: string) {
       description: true,
       coverUrl: true,
       language: true,
-      genre: true,
+      genres: true,
       ownershipType: true,
       createdAt: true,
     },

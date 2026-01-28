@@ -97,18 +97,19 @@ export default async function BookPage({ params }: BookPageProps) {
                    book.language === "it" ? "🇮🇹 Italian" :
                    "📚 Other"}
                 </span>
-                {/* Genre Badge */}
-                {book.genre && (() => {
-                  const genreInfo = getGenreDisplay(book.genre);
+                {/* Genre Badges */}
+                {book.genres && book.genres.length > 0 && book.genres.map((genreCode: string) => {
+                  const genreInfo = getGenreDisplay(genreCode);
                   return genreInfo ? (
                     <Link 
-                      href={`/books?genre=${book.genre}`}
+                      key={genreCode}
+                      href={`/books?genre=${genreCode}`}
                       className="text-sm px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors"
                     >
                       {genreInfo.emoji} {genreInfo.label}
                     </Link>
                   ) : null;
-                })()}
+                })}
               </div>
 
               {/* Owner Info */}

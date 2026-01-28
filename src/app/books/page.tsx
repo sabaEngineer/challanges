@@ -128,7 +128,7 @@ export default async function BooksPage({ searchParams }: BooksPageProps) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {books.map((book) => {
-              const genreInfo = book.genre ? getGenreInfo(book.genre) : null;
+              const bookGenres = book.genres || [];
               return (
                 <Link key={book.id} href={`/books/${book.id}`}>
                   <Card className="h-full hover:border-amber-500/50 transition-all hover:shadow-lg hover:shadow-amber-500/10 cursor-pointer">
@@ -204,9 +204,17 @@ export default async function BooksPage({ searchParams }: BooksPageProps) {
                              book.language === "it" ? "🇮🇹" :
                              "📚"}
                           </span>
-                          {genreInfo && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
-                              {genreInfo.emoji}
+                          {bookGenres.slice(0, 2).map((genreCode) => {
+                            const gi = getGenreInfo(genreCode);
+                            return (
+                              <span key={genreCode} className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
+                                {gi.emoji}
+                              </span>
+                            );
+                          })}
+                          {bookGenres.length > 2 && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400">
+                              +{bookGenres.length - 2}
                             </span>
                           )}
                         </div>

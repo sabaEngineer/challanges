@@ -27,8 +27,16 @@ export function BookForm() {
   const [description, setDescription] = useState("");
   const [coverUrl, setCoverUrl] = useState("");
   const [language, setLanguage] = useState("all");
-  const [genre, setGenre] = useState<string | null>(null);
+  const [genres, setGenres] = useState<string[]>([]);
   const [ownershipType, setOwnershipType] = useState<BookOwnershipType>("physical");
+
+  const toggleGenre = (genreCode: string) => {
+    setGenres((prev) =>
+      prev.includes(genreCode)
+        ? prev.filter((g) => g !== genreCode)
+        : [...prev, genreCode]
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +53,7 @@ export function BookForm() {
         description: description.trim() || undefined,
         coverUrl: coverUrl || undefined,
         language,
-        genre: genre || undefined,
+        genres: genres.length > 0 ? genres : undefined,
         ownershipType,
       });
 
@@ -97,30 +105,22 @@ export function BookForm() {
         />
       </div>
 
-      {/* Genre */}
+      {/* Genres - Multiple Selection */}
       <div>
         <label className="block text-sm font-medium text-slate-400 mb-2">
-          Genre (optional)
+          Genres (select multiple)
+          {genres.length > 0 && (
+            <span className="ml-2 text-amber-400">({genres.length} selected)</span>
+          )}
         </label>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setGenre(null)}
-            className={`px-3 py-2 rounded-lg border transition-all text-sm ${
-              genre === null
-                ? "border-amber-500 bg-amber-500/10 text-amber-400"
-                : "border-slate-700 hover:border-slate-600 text-slate-300"
-            }`}
-          >
-            None
-          </button>
           {BOOK_GENRES.map((g) => (
             <button
               key={g.code}
               type="button"
-              onClick={() => setGenre(g.code)}
+              onClick={() => toggleGenre(g.code)}
               className={`px-3 py-2 rounded-lg border transition-all text-sm ${
-                genre === g.code
+                genres.includes(g.code)
                   ? "border-amber-500 bg-amber-500/10 text-amber-400"
                   : "border-slate-700 hover:border-slate-600 text-slate-300"
               }`}
@@ -130,6 +130,15 @@ export function BookForm() {
             </button>
           ))}
         </div>
+        {genres.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setGenres([])}
+            className="mt-2 text-xs text-slate-500 hover:text-slate-400"
+          >
+            Clear all genres
+          </button>
+        )}
       </div>
 
       {/* Language */}

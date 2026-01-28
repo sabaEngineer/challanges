@@ -47,7 +47,7 @@ export default async function EditBookPage({ params }: EditBookPageProps) {
               description: book.description || "",
               coverUrl: book.coverUrl || "",
               language: book.language || "all",
-              genre: book.genre || null,
+              genres: book.genres || [],
               ownershipType: book.ownershipType as "physical" | "digital" | "recommendation",
             }}
           />

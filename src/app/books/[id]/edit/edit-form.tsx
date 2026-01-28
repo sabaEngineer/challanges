@@ -27,7 +27,7 @@ interface EditBookFormProps {
     description: string;
     coverUrl: string;
     language: string;
-    genre: string | null;
+    genres: string[];
     ownershipType: BookOwnershipType;
   };
 }
@@ -40,10 +40,18 @@ export function EditBookForm({ bookId, initialData }: EditBookFormProps) {
   const [description, setDescription] = useState(initialData.description);
   const [coverUrl, setCoverUrl] = useState(initialData.coverUrl);
   const [language, setLanguage] = useState(initialData.language || "all");
-  const [genre, setGenre] = useState<string | null>(initialData.genre);
+  const [genres, setGenres] = useState<string[]>(initialData.genres || []);
   const [ownershipType, setOwnershipType] = useState<BookOwnershipType>(
     initialData.ownershipType
   );
+
+  const toggleGenre = (genreCode: string) => {
+    setGenres((prev) =>
+      prev.includes(genreCode)
+        ? prev.filter((g) => g !== genreCode)
+        : [...prev, genreCode]
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +68,7 @@ export function EditBookForm({ bookId, initialData }: EditBookFormProps) {
         description: description.trim() || undefined,
         coverUrl: coverUrl || undefined,
         language,
-        genre,
+        genres,
         ownershipType,
       });
 
@@ -112,30 +120,22 @@ export function EditBookForm({ bookId, initialData }: EditBookFormProps) {
         />
       </div>
 
-      {/* Genre */}
+      {/* Genres - Multiple Selection */}
       <div>
         <label className="block text-sm font-medium text-slate-400 mb-2">
-          Genre (optional)
+          Genres (select multiple)
+          {genres.length > 0 && (
+            <span className="ml-2 text-amber-400">({genres.length} selected)</span>
+          )}
         </label>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setGenre(null)}
-            className={`px-3 py-2 rounded-lg border transition-all text-sm ${
-              genre === null
-                ? "border-amber-500 bg-amber-500/10 text-amber-400"
-                : "border-slate-700 hover:border-slate-600 text-slate-300"
-            }`}
-          >
-            None
-          </button>
           {BOOK_GENRES.map((g) => (
             <button
               key={g.code}
               type="button"
-              onClick={() => setGenre(g.code)}
+              onClick={() => toggleGenre(g.code)}
               className={`px-3 py-2 rounded-lg border transition-all text-sm ${
-                genre === g.code
+                genres.includes(g.code)
                   ? "border-amber-500 bg-amber-500/10 text-amber-400"
                   : "border-slate-700 hover:border-slate-600 text-slate-300"
               }`}
@@ -145,6 +145,15 @@ export function EditBookForm({ bookId, initialData }: EditBookFormProps) {
             </button>
           ))}
         </div>
+        {genres.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setGenres([])}
+            className="mt-2 text-xs text-slate-500 hover:text-slate-400"
+          >
+            Clear all genres
+          </button>
+        )}
       </div>
 
       {/* Language */}

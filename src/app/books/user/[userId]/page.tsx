@@ -93,7 +93,7 @@ export default async function PublicBookListPage({ params }: PublicBookListProps
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {books.map((book) => {
               const lang = getLanguageDisplay(book.language);
-              const genreInfo = getGenreDisplay(book.genre);
+              const bookGenres = book.genres || [];
               return (
                 <Card key={book.id} className="hover:border-slate-600 transition-all">
                   <div className="flex gap-4">
@@ -137,11 +137,14 @@ export default async function PublicBookListPage({ params }: PublicBookListProps
                         <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400">
                           {lang.flag} {lang.label}
                         </span>
-                        {genreInfo && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
-                            {genreInfo.emoji} {genreInfo.label}
-                          </span>
-                        )}
+                        {bookGenres.map((genreCode) => {
+                          const gi = getGenreDisplay(genreCode);
+                          return gi ? (
+                            <span key={genreCode} className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
+                              {gi.emoji} {gi.label}
+                            </span>
+                          ) : null;
+                        })}
                       </div>
                     </div>
                   </div>

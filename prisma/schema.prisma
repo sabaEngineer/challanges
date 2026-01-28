@@ -252,7 +252,7 @@ model Book {
   description   String?           @db.Text
   coverUrl      String?           @map("cover_url") @db.Text
   language      String            @default("all") // "all", "en", "ka", "ru", etc.
-  genre         String?           // fiction, non-fiction, mystery, romance, sci-fi, etc.
+  genres        String[]          @default([]) // Array of genre codes: fiction, drama, history, etc.
   ownershipType BookOwnershipType @map("ownership_type")
   userId        String            @map("user_id")
   lentToUserId  String?           @map("lent_to_user_id")
