@@ -19,6 +19,7 @@ export type ChallengeUnit =
   | "calories"
   | "liters"
   | "workouts"
+  | "lari"
   | "none";
 
 export interface ChallengeRequirement {
@@ -112,6 +113,7 @@ export const challengeUnitLabels: Record<ChallengeUnit, string> = {
   calories: "Calories",
   liters: "Liters",
   workouts: "Workouts",
+  lari: "Lari (₾)",
   none: "None",
 };
 
@@ -119,6 +121,6 @@ export const challengeUnitLabels: Record<ChallengeUnit, string> = {
 export const unitsForType: Record<ChallengeType, ChallengeUnit[]> = {
   distance: ["km", "meters", "steps"],
   time: ["minutes", "hours"],
-  count: ["reps", "pages", "calories", "liters", "workouts"],
+  count: ["reps", "pages", "calories", "liters", "workouts", "lari"],
   yes_no: ["none"],
 };
