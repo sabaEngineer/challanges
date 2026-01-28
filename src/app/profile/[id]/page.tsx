@@ -218,18 +218,18 @@ export default async function UserProfilePage({ params }: PageProps) {
         </div>
 
         {/* Books Section */}
-        {books.length > 0 && (
-          <Card className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <span>📚</span> Books
-              </h2>
-              <Link href={`/books/user/${id}`}>
-                <Button variant="outline" size="sm">
-                  View All
-                </Button>
-              </Link>
-            </div>
+        <Card className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <span>📚</span> Books
+            </h2>
+            <Link href={`/books/user/${id}`}>
+              <Button variant="outline" size="sm">
+                Share Books Publicly
+              </Button>
+            </Link>
+          </div>
+          {books.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {books.map((book) => (
                 <Link key={book.id} href={`/books/${book.id}`}>
@@ -253,8 +253,10 @@ export default async function UserProfilePage({ params }: PageProps) {
                 </Link>
               ))}
             </div>
-          </Card>
-        )}
+          ) : (
+            <p className="text-center text-slate-500 py-4">No books shared yet</p>
+          )}
+        </Card>
 
         {/* Recent Challenges */}
         {recentChallenges.length > 0 && (

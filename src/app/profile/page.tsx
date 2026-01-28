@@ -147,7 +147,7 @@ export default async function ProfilePage() {
             <div className="flex gap-2">
               <Link href={`/books/user/${user.id}`}>
                 <Button variant="outline" size="sm">
-                  Share List
+                  Share Books Publicly
                 </Button>
               </Link>
               <Link href="/books/my">
