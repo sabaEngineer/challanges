@@ -233,8 +233,8 @@ export function ChallengeListItem({
       {/* Desktop List View */}
       <div className="hidden md:block relative bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden hover:border-amber-500/40 hover:bg-slate-900/80 transition-all duration-300">
         <div className="flex items-stretch">
-          {/* Thumbnail Section */}
-          <div className="relative w-40 lg:w-48 flex-shrink-0">
+          {/* Thumbnail Section - Larger image */}
+          <div className="relative w-56 lg:w-72 h-44 lg:h-48 flex-shrink-0">
             {imageUrl ? (
               <img
                 src={imageUrl}

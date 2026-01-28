@@ -437,11 +437,11 @@ export function FeedPost({
 
         {/* Image */}
         {imageUrl && (
-          <div className="rounded-lg overflow-hidden mb-4">
+          <div className="rounded-lg overflow-hidden mb-4 bg-slate-800">
             <img
               src={imageUrl}
               alt="Check-in"
-              className="w-full max-h-96 object-cover"
+              className="w-full h-auto"
             />
           </div>
         )}
