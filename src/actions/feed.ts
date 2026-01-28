@@ -68,8 +68,8 @@ export async function getFeedPosts(limit: number = 20, offset: number = 0) {
     take: limit + offset + 50, // Fetch extra for better sorting
   });
 
-  // Sort to prioritize posts with images and notes, but within same day grouping
-  // This ensures recent posts don't get buried by older posts with images
+  // Sort to prioritize posts with content (image or note), but keep time order within same day
+  // This ensures recent posts with content aren't buried by older posts
   const sortedCheckins = checkins.sort((a, b) => {
     // First, group by day (most recent day first)
     const dayA = new Date(a.createdAt).toDateString();
@@ -80,15 +80,16 @@ export async function getFeedPosts(limit: number = 20, offset: number = 0) {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
     
-    // Same day: prioritize posts with image+note
-    const scoreA = (a.imageUrl ? 1 : 0) + (a.note ? 1 : 0);
-    const scoreB = (b.imageUrl ? 1 : 0) + (b.note ? 1 : 0);
+    // Same day: check if post has any content (image OR note)
+    const hasContentA = a.imageUrl || a.note ? 1 : 0;
+    const hasContentB = b.imageUrl || b.note ? 1 : 0;
     
-    if (scoreA !== scoreB) {
-      return scoreB - scoreA; // Higher score first
+    if (hasContentA !== hasContentB) {
+      // Posts with content shown before posts without
+      return hasContentB - hasContentA;
     }
     
-    // Same score on same day: sort by time desc
+    // Same content tier on same day: sort by time desc (newest first)
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   }).slice(offset, offset + limit);
 

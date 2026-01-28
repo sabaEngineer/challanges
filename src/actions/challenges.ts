@@ -259,7 +259,7 @@ export async function updateChallenge(
 }
 
 export async function getChallenges() {
-  return db.challenge.findMany({
+  const challenges = await db.challenge.findMany({
     include: {
       creator: {
         select: {
@@ -278,7 +278,27 @@ export async function getChallenges() {
         },
       },
     },
-    orderBy: { createdAt: "desc" },
+  });
+
+  // Sort: prioritize new challenges (created within 2 days), then by member count
+  const twoDaysAgo = new Date();
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+  return challenges.sort((a, b) => {
+    const aIsNew = new Date(a.createdAt) >= twoDaysAgo;
+    const bIsNew = new Date(b.createdAt) >= twoDaysAgo;
+
+    // New challenges (< 2 days old) come first, sorted by newest
+    if (aIsNew && !bIsNew) return -1;
+    if (!aIsNew && bIsNew) return 1;
+
+    // Both are new: sort by newest first
+    if (aIsNew && bIsNew) {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+
+    // Neither is new: sort by member count (most members first)
+    return b._count.members - a._count.members;
   });
 }
 

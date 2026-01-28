@@ -12,7 +12,6 @@ const LANGUAGES = [
   { code: "all", label: "All Languages", flag: "🌍" },
   { code: "en", label: "English", flag: "🇬🇧" },
   { code: "ka", label: "Georgian", flag: "🇬🇪" },
-  { code: "ru", label: "Russian", flag: "🇷🇺" },
   { code: "de", label: "German", flag: "🇩🇪" },
   { code: "fr", label: "French", flag: "🇫🇷" },
   { code: "es", label: "Spanish", flag: "🇪🇸" },

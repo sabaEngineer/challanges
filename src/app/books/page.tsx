@@ -198,7 +198,6 @@ export default async function BooksPage({ searchParams }: BooksPageProps) {
                             {book.language === "all" ? "🌍" :
                              book.language === "en" ? "🇬🇧" :
                              book.language === "ka" ? "🇬🇪" :
-                             book.language === "ru" ? "🇷🇺" :
                              book.language === "de" ? "🇩🇪" :
                              book.language === "fr" ? "🇫🇷" :
                              book.language === "es" ? "🇪🇸" :

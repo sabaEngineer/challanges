@@ -138,28 +138,73 @@ export function ChallengeListItem({
 
         {/* Content */}
         <div className="p-4">
-          <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-amber-400 transition-colors">
+          <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-amber-400 transition-colors">
             {title}
           </h3>
+
+          {/* Description */}
+          {description && (
+            <p className="text-slate-400 text-sm mb-3 line-clamp-2">
+              {description}
+            </p>
+          )}
 
           {/* Requirements */}
           {requirements.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-3">
-              {requirements.slice(0, 2).map((req, i) => (
+              {requirements.slice(0, 3).map((req, i) => (
                 <span
                   key={i}
-                  className="inline-flex items-center px-2 py-1 bg-amber-500/10 border border-amber-500/30 rounded text-xs text-amber-400 font-medium"
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-amber-500/10 border border-amber-500/30 rounded text-xs"
                 >
-                  {formatRequirement(req)}
+                  <span className="text-amber-400 font-medium">
+                    {formatRequirement(req)}
+                  </span>
+                  {req.title && (
+                    <span className="text-amber-400/60">
+                      — {req.title}
+                    </span>
+                  )}
                 </span>
               ))}
-              {requirements.length > 2 && (
+              {requirements.length > 3 && (
                 <span className="inline-flex items-center px-2 py-1 bg-slate-800 rounded text-xs text-slate-400">
-                  +{requirements.length - 2}
+                  +{requirements.length - 3}
                 </span>
               )}
             </div>
           )}
+
+          {/* Stats Row */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mb-3">
+            {/* Date */}
+            <span className="flex items-center gap-1">
+              <span>📅</span>
+              {isOneTime
+                ? formatDate(startDate)
+                : `${formatDate(startDate)} → ${formatDate(endDate)}`}
+            </span>
+
+            {/* Duration / Days */}
+            {!isOneTime && (
+              <span className="flex items-center gap-1">
+                <span>⏱️</span>
+                {isUpcoming
+                  ? `Starts in ${daysRemaining}d`
+                  : isEnded
+                  ? `${totalDays} days`
+                  : `${daysRemaining}d left`}
+              </span>
+            )}
+
+            {/* Progress for active */}
+            {isActive && !isOneTime && (
+              <span className={`flex items-center gap-1 ${statusColors.text}`}>
+                <span>📊</span>
+                Day {daysElapsed}/{totalDays} ({progressPercent}%)
+              </span>
+            )}
+          </div>
 
           {/* Footer */}
           <div className="flex items-center justify-between text-sm text-slate-500 pt-3 border-t border-slate-800">
@@ -168,15 +213,19 @@ export function ChallengeListItem({
               {creator && (
                 <>
                   <span>•</span>
-                  <span>{creator.username ? `@${creator.username}` : "Anonymous"}</span>
+                  <div className="flex items-center gap-1">
+                    {creator.avatarUrl ? (
+                      <img
+                        src={creator.avatarUrl}
+                        alt=""
+                        className="w-4 h-4 rounded-full"
+                      />
+                    ) : null}
+                    <span>{creator.username ? `@${creator.username}` : creator.fullName || "Anonymous"}</span>
+                  </div>
                 </>
               )}
             </div>
-            <span>
-              {isOneTime
-                ? formatDate(startDate)
-                : `${formatDate(startDate)} - ${formatDate(endDate)}`}
-            </span>
           </div>
         </div>
       </div>

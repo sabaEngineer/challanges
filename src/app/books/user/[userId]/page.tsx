@@ -14,7 +14,6 @@ const getLanguageDisplay = (code: string) => {
     all: { flag: "🌍", label: "All Languages" },
     en: { flag: "🇬🇧", label: "English" },
     ka: { flag: "🇬🇪", label: "Georgian" },
-    ru: { flag: "🇷🇺", label: "Russian" },
     de: { flag: "🇩🇪", label: "German" },
     fr: { flag: "🇫🇷", label: "French" },
     es: { flag: "🇪🇸", label: "Spanish" },

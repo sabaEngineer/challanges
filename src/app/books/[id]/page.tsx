@@ -91,7 +91,6 @@ export default async function BookPage({ params }: BookPageProps) {
                   {book.language === "all" ? "🌍 All Languages" :
                    book.language === "en" ? "🇬🇧 English" :
                    book.language === "ka" ? "🇬🇪 Georgian" :
-                   book.language === "ru" ? "🇷🇺 Russian" :
                    book.language === "de" ? "🇩🇪 German" :
                    book.language === "fr" ? "🇫🇷 French" :
                    book.language === "es" ? "🇪🇸 Spanish" :
