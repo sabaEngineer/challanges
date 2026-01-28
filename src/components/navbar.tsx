@@ -56,6 +56,14 @@ export async function Navbar() {
                 >
                   My Activity
                 </Link>
+                {user.role === "admin" && (
+                  <Link
+                    href="/admin"
+                    className="text-red-400 hover:text-red-300 transition-colors text-sm font-medium"
+                  >
+                    Admin
+                  </Link>
+                )}
                 <div className="flex items-center space-x-3">
                   <NotificationsDropdown initialCount={unreadCount} />
                   <Link
@@ -95,6 +103,7 @@ export async function Navbar() {
               isLoggedIn={!!user}
               userAvatar={user?.avatarUrl}
               userName={user?.fullName || user?.username}
+              userRole={user?.role}
             />
           </div>
         </div>

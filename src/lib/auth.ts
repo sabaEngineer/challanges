@@ -103,6 +103,7 @@ export async function getCurrentUser() {
       fullName: true,
       avatarUrl: true,
       username: true,
+      role: true,
       createdAt: true,
     },
   });

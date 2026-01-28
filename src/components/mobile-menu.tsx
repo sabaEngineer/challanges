@@ -8,9 +8,10 @@ interface MobileMenuProps {
   isLoggedIn: boolean;
   userAvatar?: string | null;
   userName?: string | null;
+  userRole?: string | null;
 }
 
-export function MobileMenu({ isLoggedIn, userAvatar, userName }: MobileMenuProps) {
+export function MobileMenu({ isLoggedIn, userAvatar, userName, userRole }: MobileMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -115,6 +116,17 @@ export function MobileMenu({ isLoggedIn, userAvatar, userName }: MobileMenuProps
                     <span className="text-xl">🔔</span>
                     <span className="text-slate-200">Notifications</span>
                   </Link>
+
+                  {userRole === "admin" && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 transition-colors bg-red-500/10 border border-red-500/30"
+                    >
+                      <span className="text-xl">⚙️</span>
+                      <span className="text-red-400 font-medium">Admin Panel</span>
+                    </Link>
+                  )}
 
                   <hr className="border-slate-800 my-2" />
 
