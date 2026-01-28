@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import type { ActionResult, Challenge, ChallengeType, ChallengeUnit } from "@/lib/types";
-import { ChallengeType as PrismaChallengeType, ChallengeUnit as PrismaChallengeUnit } from "@prisma/client";
+import type { ActionResult, Challenge, ChallengeType, ChallengeUnit, StreakMode } from "@/lib/types";
+import { ChallengeType as PrismaChallengeType, ChallengeUnit as PrismaChallengeUnit, StreakMode as PrismaStreakMode } from "@prisma/client";
 
 interface RequirementInput {
   title: string;
@@ -33,6 +33,7 @@ export async function createChallenge(
   const imageUrl = formData.get("imageUrl") as string;
   const startDate = formData.get("startDate") as string;
   const endDate = formData.get("endDate") as string;
+  const streakMode = (formData.get("streakMode") as StreakMode) || "strict";
 
   if (!title || !startDate || !endDate) {
     return { success: false, error: "Please fill in all required fields" };
@@ -79,6 +80,7 @@ export async function createChallenge(
       imageUrl: imageUrl || null,
       startDate: start,
       endDate: end,
+      streakMode: streakMode as PrismaStreakMode,
       createdBy: user.id,
       requirements: {
         create: finalRequirements.map((req) => ({

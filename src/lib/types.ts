@@ -8,6 +8,7 @@ export interface User {
 }
 
 export type ChallengeType = "distance" | "time" | "count" | "yes_no";
+export type StreakMode = "strict" | "flexible";
 export type ChallengeUnit =
   | "reps"
   | "steps"
@@ -39,11 +40,23 @@ export interface Challenge {
   imageUrl?: string | null;
   startDate: Date;
   endDate: Date;
+  streakMode?: StreakMode;
   createdBy: string;
   createdAt: Date;
   creator?: User;
   requirements?: ChallengeRequirement[];
 }
+
+// Streak mode labels and descriptions
+export const streakModeLabels: Record<StreakMode, string> = {
+  strict: "Daily (Strict)",
+  flexible: "Flexible",
+};
+
+export const streakModeDescriptions: Record<StreakMode, string> = {
+  strict: "Streak resets to 0 if you miss a day",
+  flexible: "Streak doesn't break on missed days",
+};
 
 export type MemberStatus = "active" | "left" | "removed" | "pending";
 

@@ -65,6 +65,13 @@ enum MemberStatus {
   @@map("member_status")
 }
 
+enum StreakMode {
+  strict   // Streak resets to 0 if a day is missed
+  flexible // Streak doesn't break on missed days, just doesn't increase
+
+  @@map("streak_mode")
+}
+
 enum NotificationType {
   challenge_invitation
   invitation_accepted
@@ -92,14 +99,15 @@ enum ReactionType {
 }
 
 model Challenge {
-  id          String   @id @default(uuid())
+  id          String     @id @default(uuid())
   title       String
-  description String?  @db.Text
-  imageUrl    String?  @map("image_url") @db.Text
-  startDate   DateTime @map("start_date") @db.Date
-  endDate     DateTime @map("end_date") @db.Date
-  createdBy   String   @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
+  description String?    @db.Text
+  imageUrl    String?    @map("image_url") @db.Text
+  startDate   DateTime   @map("start_date") @db.Date
+  endDate     DateTime   @map("end_date") @db.Date
+  streakMode  StreakMode @default(strict) @map("streak_mode")
+  createdBy   String     @map("created_by")
+  createdAt   DateTime   @default(now()) @map("created_at")
 
   creator       User                   @relation("ChallengeCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   requirements  ChallengeRequirement[]

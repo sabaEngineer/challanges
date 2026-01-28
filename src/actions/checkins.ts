@@ -195,6 +195,14 @@ export async function createOrUpdateCheckin(
 }
 
 async function updateStreak(challengeId: string, userId: string): Promise<number> {
+  // Get the challenge to check streak mode
+  const challenge = await db.challenge.findUnique({
+    where: { id: challengeId },
+    select: { streakMode: true },
+  });
+
+  const streakMode = challenge?.streakMode || "strict";
+
   // Get all completed checkins for this user and challenge
   const checkins = await db.dailyCheckin.findMany({
     where: {
@@ -206,7 +214,7 @@ async function updateStreak(challengeId: string, userId: string): Promise<number
     select: { checkinDate: true },
   });
 
-  console.log(`[updateStreak] Found ${checkins.length} completed check-ins for user ${userId}`);
+  console.log(`[updateStreak] Found ${checkins.length} completed check-ins for user ${userId}, streakMode: ${streakMode}`);
 
   if (checkins.length === 0) {
     // No completed check-ins, reset streak to 0
@@ -217,7 +225,31 @@ async function updateStreak(challengeId: string, userId: string): Promise<number
     return 0;
   }
 
-  // Calculate current streak with timezone offset (UTC+4 for Georgia)
+  // For flexible mode: streak is simply the total count of completed days
+  if (streakMode === "flexible") {
+    const currentStreak = checkins.length;
+    
+    // Get current member record to compare best streak
+    const member = await db.challengeMember.findUnique({
+      where: { challengeId_userId: { challengeId, userId } },
+      select: { bestStreak: true },
+    });
+
+    const newBestStreak = Math.max(member?.bestStreak || 0, currentStreak);
+
+    await db.challengeMember.update({
+      where: { challengeId_userId: { challengeId, userId } },
+      data: {
+        currentStreak,
+        bestStreak: newBestStreak,
+      },
+    });
+    
+    console.log(`[updateStreak] Flexible mode - streak is total completed: ${currentStreak}`);
+    return currentStreak;
+  }
+
+  // Strict mode: Calculate current streak with consecutive days logic
   const TIMEZONE_OFFSET_HOURS = 4;
   const now = new Date();
   const adjustedNow = new Date(now.getTime() + TIMEZONE_OFFSET_HOURS * 60 * 60 * 1000);
