@@ -451,29 +451,16 @@ export function SwipeableFeedPost({
           slideDirection === "left" ? "-translate-x-4" : 
           slideDirection === "right" ? "translate-x-4" : ""
         }`}>
-          {/* Status & Date */}
-          {(() => {
-            const completedItems = currentCheckin.items.filter(item => item.isDone).length;
-            const totalItems = currentCheckin.items.length;
-            return (
-              <div className="flex items-center gap-2 mb-3">
-                <div className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  completedItems === totalItems 
-                    ? "bg-emerald-500/20 text-emerald-400" 
-                    : "bg-blue-500/20 text-blue-400"
-                }`}>
-                  {completedItems === totalItems ? "✓ All done" : `${completedItems}/${totalItems} completed`}
-                </div>
-                <span className="text-xs text-slate-500">
-                  {new Date(checkinDate).toLocaleDateString("en-US", {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </span>
-              </div>
-            );
-          })()}
+          {/* Challenge Name */}
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-sm text-slate-400">Challenge -</span>
+            <Link 
+              href={`/challenges/${currentCheckin.challenge.id}`}
+              className="text-sm text-amber-400 hover:underline font-medium"
+            >
+              {currentCheckin.challenge.title}
+            </Link>
+          </div>
 
           {/* Requirements */}
           <div className="space-y-1.5 mb-4">
