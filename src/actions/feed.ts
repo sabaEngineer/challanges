@@ -226,6 +226,165 @@ export async function getFeedPosts(limit: number = 20, offset: number = 0) {
   }));
 }
 
+// Get feed posts grouped by user + date (for swipeable card stacks)
+export async function getGroupedFeedPosts(limit: number = 20, offset: number = 0) {
+  const user = await getCurrentUser();
+
+  const checkins = await db.dailyCheckin.findMany({
+    where: {
+      isDone: true,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          fullName: true,
+          username: true,
+          avatarUrl: true,
+        },
+      },
+      challenge: {
+        select: {
+          id: true,
+          title: true,
+          imageUrl: true,
+        },
+      },
+      items: {
+        include: {
+          requirement: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 200, // Fetch more to group properly
+  });
+
+  // Group check-ins by user + checkinDate
+  const groupedMap = new Map<string, typeof checkins>();
+
+  checkins.forEach((checkin) => {
+    const dateKey = new Date(checkin.checkinDate).toISOString().split('T')[0];
+    const groupKey = `${checkin.userId}_${dateKey}`;
+
+    if (!groupedMap.has(groupKey)) {
+      groupedMap.set(groupKey, []);
+    }
+    groupedMap.get(groupKey)!.push(checkin);
+  });
+
+  // Helper to check if URL is a video
+  const isVideo = (url: string | null) => {
+    if (!url) return false;
+    return url.includes("/videos/") || 
+           url.toLowerCase().includes(".mp4") || 
+           url.toLowerCase().includes(".webm") || 
+           url.toLowerCase().includes(".mov");
+  };
+
+  // Helper to get content priority (lower = higher priority)
+  const getContentPriority = (checkin: typeof checkins[0]) => {
+    if (isVideo(checkin.imageUrl)) return 1; // Video first
+    if (checkin.imageUrl) return 2; // Image second
+    if (checkin.note) return 3; // Caption third
+    return 4; // Others last
+  };
+
+  // Convert to array and sort by most recent checkin in each group
+  const groupedArray = Array.from(groupedMap.entries()).map(([key, groupCheckins]) => {
+    // Sort checkins within group by content priority, then by createdAt desc
+    groupCheckins.sort((a, b) => {
+      const priorityA = getContentPriority(a);
+      const priorityB = getContentPriority(b);
+      
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB; // Lower priority number = shown first
+      }
+      
+      // Same priority: sort by time desc (newest first)
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+    
+    const mostRecent = groupCheckins[0];
+    return {
+      key,
+      checkins: groupCheckins,
+      mostRecentTime: new Date(mostRecent.createdAt).getTime(),
+      hasContent: groupCheckins.some(c => c.imageUrl || c.note),
+      user: mostRecent.user,
+      checkinDate: mostRecent.checkinDate,
+    };
+  });
+
+  // Sort groups: by most recent time, prioritize those with content
+  groupedArray.sort((a, b) => {
+    const dayA = new Date(a.checkinDate).toDateString();
+    const dayB = new Date(b.checkinDate).toDateString();
+
+    if (dayA !== dayB) {
+      return b.mostRecentTime - a.mostRecentTime;
+    }
+
+    if (a.hasContent !== b.hasContent) {
+      return a.hasContent ? -1 : 1;
+    }
+
+    return b.mostRecentTime - a.mostRecentTime;
+  });
+
+  // Paginate
+  const paginatedGroups = groupedArray.slice(offset, offset + limit);
+
+  // Get all checkin IDs for reactions and comments
+  const allCheckinIds = paginatedGroups.flatMap(g => g.checkins.map(c => c.id));
+  const allUserIds = paginatedGroups.map(g => g.user.id);
+
+  const [reactionsMap, commentCounts, userCompletedChallenges] = allCheckinIds.length > 0
+    ? await Promise.all([
+        getMultiplePostReactions(allCheckinIds),
+        getMultipleCommentCounts(allCheckinIds),
+        getUsersCompletedChallenges(allUserIds),
+      ])
+    : [{} as Record<string, ReactionWithUsers>, {} as Record<string, number>, {} as Record<string, number>];
+
+  return paginatedGroups.map((group) => ({
+    groupKey: group.key,
+    user: {
+      ...group.user,
+      completedChallenges: userCompletedChallenges[group.user.id] || 0,
+    },
+    checkinDate: group.checkinDate,
+    isOwnPost: user?.id === group.user.id,
+    checkins: group.checkins.map((checkin) => ({
+      id: checkin.id,
+      challenge: checkin.challenge,
+      note: checkin.note,
+      imageUrl: checkin.imageUrl,
+      createdAt: checkin.createdAt,
+      items: checkin.items.map((item) => ({
+        id: item.id,
+        value: item.value ? Number(item.value) : null,
+        isDone: item.isDone,
+        requirement: {
+          id: item.requirement.id,
+          title: item.requirement.title,
+          type: item.requirement.type,
+          targetValue: item.requirement.targetValue ? Number(item.requirement.targetValue) : null,
+          unit: item.requirement.unit,
+        },
+      })),
+      reactions: reactionsMap[checkin.id] || {
+        counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0 } as Record<ReactionType, number>,
+        userReacted: [] as ReactionType[],
+        reactors: { fire: [], strong: [], kudos: [], not_bad: [] } as Record<ReactionType, ReactionUser[]>,
+      },
+      commentCount: commentCounts[checkin.id] || 0,
+    })),
+  }));
+}
+
 export async function getMyFeedPosts(limit: number = 20) {
   const user = await getCurrentUser();
   if (!user) return [];
