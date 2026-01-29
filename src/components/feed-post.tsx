@@ -477,14 +477,26 @@ export function FeedPost({
           </div>
         )}
 
-        {/* Image */}
+        {/* Media (Image or Video) */}
         {imageUrl && (
           <div className="rounded-lg overflow-hidden mb-4 bg-slate-800">
-            <img
-              src={imageUrl}
-              alt="Check-in"
-              className="w-full h-auto"
-            />
+            {imageUrl.includes("/videos/") || 
+             imageUrl.toLowerCase().includes(".mp4") || 
+             imageUrl.toLowerCase().includes(".webm") || 
+             imageUrl.toLowerCase().includes(".mov") ? (
+              <video
+                src={imageUrl}
+                controls
+                preload="metadata"
+                className="w-full h-auto"
+              />
+            ) : (
+              <img
+                src={imageUrl}
+                alt="Check-in"
+                className="w-full h-auto"
+              />
+            )}
           </div>
         )}
       </div>

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createOrUpdateCheckin } from "@/actions/checkins";
 import { Button } from "./ui/button";
-import { ImageUploadCompact } from "./image-upload";
+import { MediaUploadCompact } from "./media-upload";
 import {
   ChallengeType,
   ChallengeUnit,
@@ -467,15 +467,16 @@ export function CheckinModal({
             />
           </div>
 
-          {/* Image Upload */}
+          {/* Media Upload */}
           <div>
             <label className="block text-sm font-medium text-slate-400 mb-2">
-              Add Photo (optional)
+              Add Photo/Video (optional)
             </label>
-            <ImageUploadCompact
+            <MediaUploadCompact
               value={imageUrl || undefined}
               onChange={(url) => setImageUrl(url || "")}
               prefix="checkins"
+              maxVideoSize={100}
             />
           </div>
         </div>
