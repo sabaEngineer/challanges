@@ -403,14 +403,14 @@ export function SwipeableFeedPost({
           )}
         </Link>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-white">{user.fullName || "Anonymous"}</span>
+          <p className="text-white">
+            <span className="font-semibold">{user.fullName || "Anonymous"}</span>
             {user.completedChallenges !== undefined && (() => {
               const earnedBadges = getEarnedBadges(user.completedChallenges);
               const highestBadge = earnedBadges.length > 0 ? earnedBadges[earnedBadges.length - 1] : null;
               if (highestBadge) {
                 return (
-                  <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-gradient-to-r from-slate-800 to-slate-700 border border-slate-600" title={`${highestBadge.name} - ${highestBadge.description}`}>
+                  <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-gradient-to-r from-slate-800 to-slate-700 border border-slate-600" title={`${highestBadge.name} - ${highestBadge.description}`}>
                     <span>{highestBadge.icon}</span>
                   </span>
                 );
@@ -418,10 +418,30 @@ export function SwipeableFeedPost({
               return null;
             })()}
             {isOwnPost && (
-              <span className="text-xs px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded">You</span>
+              <span className="ml-1.5 text-xs px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded">You</span>
             )}
-          </div>
-          <p className="text-sm text-slate-500">{formatTimeAgo(currentCheckin.createdAt)}</p>
+            <span className="text-slate-400">
+              {(() => {
+                const completedItems = currentCheckin.items.filter(item => item.isDone).length;
+                const totalItems = currentCheckin.items.length;
+                return completedItems === totalItems 
+                  ? " completed daily check-in for " 
+                  : " made progress on ";
+              })()}
+            </span>
+            <Link 
+              href={`/challenges/${currentCheckin.challenge.id}`}
+              className="font-semibold text-amber-400 hover:underline"
+            >
+              {currentCheckin.challenge.title}
+            </Link>
+            {(() => {
+              const completedItems = currentCheckin.items.filter(item => item.isDone).length;
+              const totalItems = currentCheckin.items.length;
+              return completedItems === totalItems ? <span className="ml-1">🔥</span> : null;
+            })()}
+          </p>
+          <p className="text-sm text-slate-500 mt-0.5">{formatTimeAgo(currentCheckin.createdAt)}</p>
         </div>
       </div>
 
@@ -431,29 +451,42 @@ export function SwipeableFeedPost({
           slideDirection === "left" ? "-translate-x-4" : 
           slideDirection === "right" ? "translate-x-4" : ""
         }`}>
-          {/* Challenge Title */}
-          <Link href={`/challenges/${currentCheckin.challenge.id}`} className="block mb-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-400 text-sm font-medium hover:bg-amber-500/20 transition-colors">
-              <span>🎯</span>
-              <span>{currentCheckin.challenge.title}</span>
-            </div>
-          </Link>
+          {/* Status & Date */}
+          {(() => {
+            const completedItems = currentCheckin.items.filter(item => item.isDone).length;
+            const totalItems = currentCheckin.items.length;
+            return (
+              <div className="flex items-center gap-2 mb-3">
+                <div className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  completedItems === totalItems 
+                    ? "bg-emerald-500/20 text-emerald-400" 
+                    : "bg-blue-500/20 text-blue-400"
+                }`}>
+                  {completedItems === totalItems ? "✓ All done" : `${completedItems}/${totalItems} completed`}
+                </div>
+                <span className="text-xs text-slate-500">
+                  {new Date(checkinDate).toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
+              </div>
+            );
+          })()}
 
-          {/* Requirements - compact pills */}
-          <div className="flex flex-wrap gap-2 mb-3">
+          {/* Requirements */}
+          <div className="space-y-1.5 mb-4">
             {currentCheckin.items.map((item) => (
-              <div 
-                key={item.id} 
-                className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${
-                  item.isDone 
-                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" 
-                    : "bg-slate-800 text-slate-400 border border-slate-700"
-                }`}
-              >
-                <span>{item.isDone ? "✓" : "○"}</span>
-                <span>{item.requirement.title || item.requirement.type}</span>
+              <div key={item.id} className="flex items-center gap-2 text-sm">
+                <span className={item.isDone ? "text-emerald-400" : "text-slate-500"}>
+                  {item.isDone ? "✓" : "○"}
+                </span>
+                <span className={item.isDone ? "text-white" : "text-slate-400"}>
+                  {item.requirement.title || item.requirement.type}
+                </span>
                 {item.requirement.type !== "yes_no" && item.value !== null && (
-                  <span className="text-slate-500">
+                  <span className="text-slate-500 ml-auto">
                     {item.value}{item.requirement.targetValue ? `/${item.requirement.targetValue}` : ""} {formatUnit(item.requirement.unit)}
                   </span>
                 )}
@@ -463,14 +496,14 @@ export function SwipeableFeedPost({
 
           {/* Note */}
           {currentCheckin.note && (
-            <div className="bg-slate-800/50 rounded-lg p-3 mb-3">
+            <div className="bg-slate-800/50 rounded-lg p-3 mb-4">
               <p className="text-slate-300 text-sm">{currentCheckin.note}</p>
             </div>
           )}
 
           {/* Media */}
           {currentCheckin.imageUrl && (
-            <div className="rounded-xl overflow-hidden bg-slate-800">
+            <div className="rounded-lg overflow-hidden mb-4 bg-slate-800">
               {isVideo(currentCheckin.imageUrl) ? (
                 <video src={currentCheckin.imageUrl} controls preload="metadata" className="w-full h-auto" />
               ) : (
