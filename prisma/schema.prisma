@@ -25,16 +25,19 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  challenges       Challenge[]       @relation("ChallengeCreator")
-  challengeMembers ChallengeMember[]
-  notifications    Notification[]
-  dailyCheckins    DailyCheckin[]
-  reactions        PostReaction[]
-  comments         PostComment[]
-  commentLikes     CommentLike[]
-  books            Book[]            @relation("BookOwner")
-  borrowedBooks    Book[]            @relation("BookBorrower")
-  bookRequests     BookLendRequest[] @relation("BookRequester")
+  challenges            Challenge[]            @relation("ChallengeCreator")
+  challengeMembers      ChallengeMember[]
+  notifications         Notification[]
+  dailyCheckins         DailyCheckin[]
+  reactions             PostReaction[]
+  comments              PostComment[]
+  commentLikes          CommentLike[]
+  books                 Book[]                 @relation("BookOwner")
+  borrowedBooks         Book[]                 @relation("BookBorrower")
+  bookRequests          BookLendRequest[]      @relation("BookRequester")
+  challengeReactions    ChallengeReaction[]
+  challengeComments     ChallengeComment[]
+  challengeCommentLikes ChallengeCommentLike[]
 
   @@map("users")
 }
@@ -123,6 +126,8 @@ model Challenge {
   members       ChallengeMember[]
   notifications Notification[]
   dailyCheckins DailyCheckin[]
+  reactions     ChallengeReaction[]
+  comments      ChallengeComment[]
 
   @@map("challenges")
 }
@@ -256,6 +261,50 @@ model CommentLike {
 
   @@unique([commentId, userId])
   @@map("comment_likes")
+}
+
+// Challenge reactions (for new challenge announcements in feed)
+model ChallengeReaction {
+  id          String       @id @default(uuid())
+  challengeId String       @map("challenge_id")
+  userId      String       @map("user_id")
+  type        ReactionType
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId, type])
+  @@map("challenge_reactions")
+}
+
+// Challenge comments (for new challenge announcements in feed)
+model ChallengeComment {
+  id          String   @id @default(uuid())
+  challengeId String   @map("challenge_id")
+  userId      String   @map("user_id")
+  content     String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  challenge Challenge              @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes     ChallengeCommentLike[]
+
+  @@map("challenge_comments")
+}
+
+model ChallengeCommentLike {
+  id        String   @id @default(uuid())
+  commentId String   @map("comment_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  comment ChallengeComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@map("challenge_comment_likes")
 }
 
 // Book ownership type

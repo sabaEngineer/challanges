@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { getFeedPosts } from "@/actions/feed";
+import { getFeedPosts, getNewChallengesForFeed } from "@/actions/feed";
 import { FeedPost } from "@/components/feed-post";
+import { NewChallengePost } from "@/components/new-challenge-post";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 
@@ -12,7 +13,33 @@ export default async function FeedPage() {
     redirect("/login");
   }
 
-  const posts = await getFeedPosts(30);
+  const [posts, newChallenges] = await Promise.all([
+    getFeedPosts(30),
+    getNewChallengesForFeed(10),
+  ]);
+
+  // Combine and sort all feed items by date
+  type FeedItem = 
+    | { type: "checkin"; data: typeof posts[0]; sortDate: Date }
+    | { type: "new_challenge"; data: typeof newChallenges[0]; sortDate: Date };
+
+  const feedItems: FeedItem[] = [
+    ...posts.map((post) => ({
+      type: "checkin" as const,
+      data: post,
+      sortDate: new Date(post.createdAt),
+    })),
+    ...newChallenges.map((challenge) => ({
+      type: "new_challenge" as const,
+      data: challenge,
+      sortDate: new Date(challenge.createdAt),
+    })),
+  ];
+
+  // Sort by date descending
+  feedItems.sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
+
+  const hasContent = feedItems.length > 0;
 
   return (
     <div className="min-h-screen px-4 py-8">
@@ -28,7 +55,7 @@ export default async function FeedPage() {
         </div>
 
         {/* Feed */}
-        {posts.length === 0 ? (
+        {!hasContent ? (
           <Card className="text-center py-16">
             <div className="text-6xl mb-4">📭</div>
             <h3 className="text-xl font-semibold text-white mb-2">No activity yet</h3>
@@ -44,26 +71,51 @@ export default async function FeedPage() {
           </Card>
         ) : (
           <div className="space-y-6">
-            {posts.map((post) => (
-              <FeedPost
-                key={post.id}
-                id={post.id}
-                user={post.user}
-                challenge={post.challenge}
-                checkinDate={post.checkinDate}
-                note={post.note}
-                imageUrl={post.imageUrl}
-                createdAt={post.createdAt}
-                items={post.items}
-                isOwnPost={post.isOwnPost}
-                initialReactions={post.reactions}
-                initialCommentCount={post.commentCount}
-              />
-            ))}
+            {feedItems.map((item) => {
+              if (item.type === "checkin") {
+                const post = item.data;
+                return (
+                  <FeedPost
+                    key={post.id}
+                    id={post.id}
+                    user={post.user}
+                    challenge={post.challenge}
+                    checkinDate={post.checkinDate}
+                    note={post.note}
+                    imageUrl={post.imageUrl}
+                    createdAt={post.createdAt}
+                    items={post.items}
+                    isOwnPost={post.isOwnPost}
+                    initialReactions={post.reactions}
+                    initialCommentCount={post.commentCount}
+                  />
+                );
+              } else {
+                const challenge = item.data;
+                return (
+                  <NewChallengePost
+                    key={challenge.id}
+                    id={challenge.id}
+                    challengeId={challenge.challengeId}
+                    title={challenge.title}
+                    description={challenge.description}
+                    imageUrl={challenge.imageUrl}
+                    startDate={challenge.startDate}
+                    endDate={challenge.endDate}
+                    createdAt={challenge.createdAt}
+                    creator={challenge.creator}
+                    memberCount={challenge.memberCount}
+                    commentCount={challenge.commentCount}
+                    requirements={challenge.requirements}
+                    isOwnChallenge={challenge.isOwnChallenge}
+                    initialReactions={challenge.reactions}
+                  />
+                );
+              }
+            })}
           </div>
         )}
       </div>
     </div>
   );
 }
-
