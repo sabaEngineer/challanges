@@ -91,7 +91,6 @@ export function SwipeableFeedPost({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPending, startTransition] = useTransition();
   const [isAnimating, setIsAnimating] = useState(false);
-  const [slideDirection, setSlideDirection] = useState<"left" | "right" | null>(null);
   
   const [reactionsState, setReactionsState] = useState<Record<string, {
     counts: Record<ReactionType, number>;
@@ -125,27 +124,23 @@ export function SwipeableFeedPost({
 
   const goToNext = () => {
     if (currentIndex < checkins.length - 1 && !isAnimating) {
-      setSlideDirection("left");
       setIsAnimating(true);
+      setCurrentIndex(prev => prev + 1);
+      setShowComments(false);
       setTimeout(() => {
-        setCurrentIndex(prev => prev + 1);
-        setShowComments(false);
-        setSlideDirection(null);
         setIsAnimating(false);
-      }, 200);
+      }, 150);
     }
   };
 
   const goToPrev = () => {
     if (currentIndex > 0 && !isAnimating) {
-      setSlideDirection("right");
       setIsAnimating(true);
+      setCurrentIndex(prev => prev - 1);
+      setShowComments(false);
       setTimeout(() => {
-        setCurrentIndex(prev => prev - 1);
-        setShowComments(false);
-        setSlideDirection(null);
         setIsAnimating(false);
-      }, 200);
+      }, 150);
     }
   };
 
@@ -323,20 +318,9 @@ export function SwipeableFeedPost({
 
   return (
     <Card className="overflow-hidden">
-      {/* Header + Progress bars + Navigation at top - only when multiple check-ins */}
+      {/* Progress bars + Navigation at top - only when multiple check-ins */}
       {checkins.length > 1 && (
         <div className="px-3 pt-3 pb-2 border-b border-slate-700/50">
-          {/* Title */}
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-amber-400">🔥</span>
-            <span className="text-sm font-medium text-white">
-              {user.fullName?.split(' ')[0] || 'User'}'s daily check-ins
-            </span>
-            <span className="text-xs text-slate-500">
-              • {new Date(checkinDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-            </span>
-          </div>
-          
           {/* Progress bars - Instagram style */}
           <div className="flex gap-1 mb-2">
             {checkins.map((_, idx) => (
@@ -420,40 +404,16 @@ export function SwipeableFeedPost({
             {isOwnPost && (
               <span className="ml-1.5 text-xs px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded">You</span>
             )}
-            <span className="text-slate-400">
-              {(() => {
-                const completedItems = currentCheckin.items.filter(item => item.isDone).length;
-                const totalItems = currentCheckin.items.length;
-                return completedItems === totalItems 
-                  ? " completed daily check-in for " 
-                  : " made progress on ";
-              })()}
-            </span>
-            <Link 
-              href={`/challenges/${currentCheckin.challenge.id}`}
-              className="font-semibold text-amber-400 hover:underline"
-            >
-              {currentCheckin.challenge.title}
-            </Link>
-            {(() => {
-              const completedItems = currentCheckin.items.filter(item => item.isDone).length;
-              const totalItems = currentCheckin.items.length;
-              return completedItems === totalItems ? <span className="ml-1">🔥</span> : null;
-            })()}
           </p>
           <p className="text-sm text-slate-500 mt-0.5">{formatTimeAgo(currentCheckin.createdAt)}</p>
         </div>
       </div>
 
       {/* Content Area */}
-      <div className={`transition-opacity duration-200 ${isAnimating ? "opacity-50" : "opacity-100"}`}>
-        <div className={`px-4 pb-4 transition-transform duration-200 ${
-          slideDirection === "left" ? "-translate-x-4" : 
-          slideDirection === "right" ? "translate-x-4" : ""
-        }`}>
+      <div className="px-4 pb-4">
           {/* Challenge Name */}
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-sm text-slate-400">Challenge -</span>
+          <div className="flex flex-wrap items-center gap-1 mb-3">
+            <span className="text-sm text-slate-400">Completed daily check-in for</span>
             <Link 
               href={`/challenges/${currentCheckin.challenge.id}`}
               className="text-sm text-amber-400 hover:underline font-medium"
@@ -498,7 +458,6 @@ export function SwipeableFeedPost({
               )}
             </div>
           )}
-        </div>
       </div>
 
       {/* Reactions Summary */}
