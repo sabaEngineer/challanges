@@ -14,12 +14,39 @@ interface MediaUploadProps {
   maxVideoSize?: number; // in MB
 }
 
-const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/mov"];
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/heic", "image/heif"];
+const VIDEO_TYPES = [
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",  // .mov on iPhone/Mac
+  "video/mov",
+  "video/x-m4v",      // iPhone video format
+  "video/x-msvideo",  // .avi
+  "video/3gpp",       // .3gp mobile videos
+  "video/3gpp2",      // .3g2
+  "video/mpeg",       // .mpeg
+  "video/ogg",        // .ogv
+];
 
-function getMediaType(mimeType: string): MediaType {
+function getMediaType(mimeType: string, fileName?: string): MediaType {
+  // Check exact match first
   if (IMAGE_TYPES.includes(mimeType)) return "image";
-  if (VIDEO_TYPES.includes(mimeType) || mimeType === "video/mov") return "video";
+  if (VIDEO_TYPES.includes(mimeType)) return "video";
+  
+  // Fallback: check if it starts with image/ or video/
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType.startsWith("video/")) return "video";
+  
+  // Last resort: check file extension if MIME type is empty or unknown
+  if (fileName) {
+    const ext = fileName.toLowerCase().split('.').pop();
+    const imageExts = ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif"];
+    const videoExts = ["mp4", "webm", "mov", "avi", "m4v", "3gp", "mkv", "mpeg", "mpg", "ogv"];
+    
+    if (ext && imageExts.includes(ext)) return "image";
+    if (ext && videoExts.includes(ext)) return "video";
+  }
+  
   return null;
 }
 
@@ -47,11 +74,13 @@ export function MediaUpload({
   const handleFile = async (file: File) => {
     if (!file) return;
 
-    const mediaType = getMediaType(file.type);
+    console.log("File type detected:", file.type, "File name:", file.name);
+    
+    const mediaType = getMediaType(file.type, file.name);
     
     // Validate file type
     if (!mediaType) {
-      setError("Please upload an image (JPEG, PNG, GIF, WebP) or video (MP4, WebM, MOV)");
+      setError(`Unsupported file type: ${file.type || "unknown"} (${file.name})`);
       return;
     }
 
@@ -138,7 +167,7 @@ export function MediaUpload({
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime,video/mov"
+        accept="image/*,video/*"
         onChange={handleInputChange}
         className="hidden"
       />
@@ -238,10 +267,13 @@ export function MediaUploadCompact({
   const handleFile = async (file: File) => {
     if (!file) return;
 
-    const mediaType = getMediaType(file.type);
+    console.log("File type detected:", file.type, "File name:", file.name);
+    
+    const mediaType = getMediaType(file.type, file.name);
     
     if (!mediaType) {
-      setError("Invalid file type");
+      // Show the actual file type in the error for debugging
+      setError(`Unsupported: ${file.type || "unknown type"} (${file.name})`);
       return;
     }
 
@@ -311,7 +343,7 @@ export function MediaUploadCompact({
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime,video/mov"
+        accept="image/*,video/*"
         onChange={handleInputChange}
         className="hidden"
       />

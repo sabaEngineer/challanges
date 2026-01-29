@@ -9,10 +9,28 @@ export async function getUploadUrl(contentType: string, prefix: string = "upload
     return { error: "You must be logged in to upload files" };
   }
 
-  // Validate content type
-  const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-  if (!allowedTypes.includes(contentType)) {
-    return { error: "Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed." };
+  // Validate content type - allow images and videos
+  const allowedImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/heic", "image/heif"];
+  const allowedVideoTypes = [
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",  // .mov
+    "video/x-m4v",
+    "video/x-msvideo",  // .avi
+    "video/3gpp",
+    "video/3gpp2",
+    "video/mpeg",
+    "video/ogg",
+  ];
+  
+  const isAllowed = 
+    allowedImageTypes.includes(contentType) || 
+    allowedVideoTypes.includes(contentType) ||
+    contentType.startsWith("image/") ||
+    contentType.startsWith("video/");
+    
+  if (!isAllowed) {
+    return { error: "Invalid file type. Only images and videos are allowed." };
   }
 
   try {
