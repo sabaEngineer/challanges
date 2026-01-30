@@ -117,8 +117,39 @@ export async function createOrUpdateCheckin(
     return { success: false, error: `Check-in date (${formatDate(checkinDate)}) must be within challenge dates (${formatDate(startDay)} - ${formatDate(endDay)})` };
   }
 
-  // Check if all items are done
-  const allDone = items.every((item) => item.isDone);
+  // Validate and recalculate isDone for each item based on actual values
+  const validatedItems = items.map((item) => {
+    const requirement = challenge.requirements.find((r) => r.id === item.requirementId);
+    if (!requirement) {
+      return item;
+    }
+
+    // For yes_no type, trust the client's isDone
+    if (requirement.type === "yes_no") {
+      return item;
+    }
+
+    // For other types, verify that value meets targetValue
+    if (requirement.targetValue && item.value !== undefined) {
+      const targetValue = Number(requirement.targetValue);
+      const actualValue = Number(item.value);
+      const actuallyDone = actualValue >= targetValue;
+      
+      return {
+        ...item,
+        isDone: actuallyDone, // Override client's isDone with server-verified value
+      };
+    }
+
+    // No target value or no value provided - mark as not done unless explicitly done
+    return {
+      ...item,
+      isDone: item.isDone && item.value !== undefined,
+    };
+  });
+
+  // Check if all items are done (using validated values)
+  const allDone = validatedItems.every((item) => item.isDone);
 
   try {
     console.log("Creating/updating checkin for date:", checkinDate, "allDone:", allDone);
@@ -149,9 +180,9 @@ export async function createOrUpdateCheckin(
     
     console.log("Checkin created/updated:", checkin.id);
 
-    // Create or update checkin items
-    console.log("Creating/updating", items.length, "checkin items");
-    for (const item of items) {
+    // Create or update checkin items (using validated items)
+    console.log("Creating/updating", validatedItems.length, "checkin items");
+    for (const item of validatedItems) {
       const checkinItem = await db.dailyCheckinItem.upsert({
         where: {
           checkinId_requirementId: {
@@ -170,7 +201,7 @@ export async function createOrUpdateCheckin(
           isDone: item.isDone,
         },
       });
-      console.log("Item created/updated:", checkinItem.id, "isDone:", checkinItem.isDone);
+      console.log("Item created/updated:", checkinItem.id, "isDone:", checkinItem.isDone, "value:", item.value);
     }
 
     // Always update streak to ensure it's accurate (handles edits that make check-ins incomplete)

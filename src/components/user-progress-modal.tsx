@@ -247,10 +247,10 @@ export function UserProgressModal({
                                     ? "bg-emerald-500/20 text-emerald-400"
                                     : hasPartial
                                     ? "bg-blue-500/20 text-blue-400"
-                                    : "bg-slate-700 text-slate-400"
+                                    : "bg-red-500/20 text-red-400"
                                 }`}
                               >
-                                {checkin.isDone ? "✓" : hasPartial ? "◐" : "○"}
+                                {checkin.isDone ? "✓" : hasPartial ? "◐" : "✗"}
                               </div>
                               <div className="text-left">
                                 <div className="font-medium text-white">
@@ -309,10 +309,10 @@ export function UserProgressModal({
                                                 ? "bg-emerald-500 text-white"
                                                 : progress > 0
                                                 ? "bg-blue-500/50 text-blue-200"
-                                                : "bg-slate-600 text-slate-400"
+                                                : "bg-red-500/20 text-red-400"
                                             }`}
                                           >
-                                            {item.isDone ? "✓" : progress > 0 ? "◐" : "○"}
+                                            {item.isDone ? "✓" : progress > 0 ? "◐" : "✗"}
                                           </span>
                                           <span className="text-sm text-white">
                                             {type === "yes_no"

@@ -124,9 +124,11 @@ export async function getFeedPosts(limit: number = 20, offset: number = 0) {
 
   // Get recent check-ins with user and challenge info
   // Fetch more to allow for sorting, then slice
+  // Include both complete and partial check-ins (any check-in that has been saved)
   const checkins = await db.dailyCheckin.findMany({
     where: {
-      isDone: true, // Only show completed check-ins
+      // Show check-ins that have at least one item recorded
+      items: { some: {} },
     },
     include: {
       user: {
@@ -204,6 +206,7 @@ export async function getFeedPosts(limit: number = 20, offset: number = 0) {
     note: checkin.note,
     imageUrl: checkin.imageUrl,
     createdAt: checkin.createdAt,
+    isDone: checkin.isDone, // Whether all requirements are completed
     items: checkin.items.map((item) => ({
       id: item.id,
       value: item.value ? Number(item.value) : null,
@@ -230,9 +233,11 @@ export async function getFeedPosts(limit: number = 20, offset: number = 0) {
 export async function getGroupedFeedPosts(limit: number = 20, offset: number = 0) {
   const user = await getCurrentUser();
 
+  // Include both complete and partial check-ins
   const checkins = await db.dailyCheckin.findMany({
     where: {
-      isDone: true,
+      // Show check-ins that have at least one item recorded
+      items: { some: {} },
     },
     include: {
       user: {
@@ -363,6 +368,7 @@ export async function getGroupedFeedPosts(limit: number = 20, offset: number = 0
       note: checkin.note,
       imageUrl: checkin.imageUrl,
       createdAt: checkin.createdAt,
+      isDone: checkin.isDone, // Whether all requirements are completed
       items: checkin.items.map((item) => ({
         id: item.id,
         value: item.value ? Number(item.value) : null,
@@ -389,10 +395,11 @@ export async function getMyFeedPosts(limit: number = 20) {
   const user = await getCurrentUser();
   if (!user) return [];
 
+  // Include both complete and partial check-ins
   const checkins = await db.dailyCheckin.findMany({
     where: {
       userId: user.id,
-      isDone: true,
+      items: { some: {} },
     },
     include: {
       user: {
@@ -430,6 +437,7 @@ export async function getMyFeedPosts(limit: number = 20) {
     note: checkin.note,
     imageUrl: checkin.imageUrl,
     createdAt: checkin.createdAt,
+    isDone: checkin.isDone,
     items: checkin.items.map((item) => ({
       id: item.id,
       value: item.value ? Number(item.value) : null,
@@ -449,10 +457,11 @@ export async function getMyFeedPosts(limit: number = 20) {
 export async function getChallengeFeed(challengeId: string, limit: number = 20) {
   const user = await getCurrentUser();
 
+  // Include both complete and partial check-ins
   const checkins = await db.dailyCheckin.findMany({
     where: {
       challengeId,
-      isDone: true,
+      items: { some: {} },
     },
     include: {
       user: {
@@ -490,6 +499,7 @@ export async function getChallengeFeed(challengeId: string, limit: number = 20) 
     note: checkin.note,
     imageUrl: checkin.imageUrl,
     createdAt: checkin.createdAt,
+    isDone: checkin.isDone,
     items: checkin.items.map((item) => ({
       id: item.id,
       value: item.value ? Number(item.value) : null,
@@ -561,6 +571,7 @@ export async function getSinglePost(postId: string) {
     note: checkin.note,
     imageUrl: checkin.imageUrl,
     createdAt: checkin.createdAt,
+    isDone: checkin.isDone,
     items: checkin.items.map((item) => ({
       id: item.id,
       value: item.value ? Number(item.value) : null,

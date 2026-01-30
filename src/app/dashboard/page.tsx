@@ -8,7 +8,6 @@ import { getUserActivityHistory } from "@/actions/profile";
 import { ChallengeCard } from "@/components/challenge-card";
 import { TodaysChallenges } from "@/components/todays-challenges";
 import { ActivityCalendar } from "@/components/activity-calendar";
-import { TopPerformerBannerLarge } from "@/components/top-performer-banner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { InvitationCard } from "@/components/invitation-card";
@@ -82,9 +81,6 @@ export default async function DashboardPage() {
           </h1>
           <p className="text-slate-400">Manage your challenges and track progress</p>
         </div>
-
-        {/* Top Performer Banner */}
-        <TopPerformerBannerLarge />
 
         {/* Pending Invitations */}
         {invitations.length > 0 && (

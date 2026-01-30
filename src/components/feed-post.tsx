@@ -439,9 +439,9 @@ export function FeedPost({
                     ? "bg-emerald-500 text-white" 
                     : progress > 0 
                       ? "bg-blue-500 text-white"
-                      : "bg-slate-700 text-slate-400"
+                      : "bg-red-500/20 text-red-400"
                 }`}>
-                  {item.isDone ? "✓" : progress > 0 ? "◐" : "○"}
+                  {item.isDone ? "✓" : progress > 0 ? "◐" : "✗"}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between text-sm">

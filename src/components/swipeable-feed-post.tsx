@@ -40,6 +40,7 @@ interface CheckinData {
   note: string | null;
   imageUrl: string | null;
   createdAt: Date;
+  isDone?: boolean; // Whether all requirements are completed
   items: {
     id: string;
     value: number | null;
@@ -448,21 +449,36 @@ export function SwipeableFeedPost({
       <div className="px-4 pb-4">
           {/* Challenge Name */}
           <div className="flex flex-wrap items-center gap-1 mb-3">
-            <span className="text-sm text-slate-400">Completed daily check-in for</span>
-            <Link 
-              href={`/challenges/${currentCheckin.challenge.id}`}
-              className="text-sm text-amber-400 hover:underline font-medium"
-            >
-              {currentCheckin.challenge.title}
-            </Link>
+            {currentCheckin.isDone === false ? (
+              <>
+                <span className="text-sm text-blue-400">Made progress on</span>
+                <Link 
+                  href={`/challenges/${currentCheckin.challenge.id}`}
+                  className="text-sm text-amber-400 hover:underline font-medium"
+                >
+                  {currentCheckin.challenge.title}
+                </Link>
+                <span className="text-xs px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded ml-1">In Progress</span>
+              </>
+            ) : (
+              <>
+                <span className="text-sm text-slate-400">Completed daily check-in for</span>
+                <Link 
+                  href={`/challenges/${currentCheckin.challenge.id}`}
+                  className="text-sm text-amber-400 hover:underline font-medium"
+                >
+                  {currentCheckin.challenge.title}
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Requirements */}
           <div className="space-y-1.5 mb-4">
             {currentCheckin.items.map((item) => (
               <div key={item.id} className="flex items-center gap-2 text-sm">
-                <span className={item.isDone ? "text-emerald-400" : "text-slate-500"}>
-                  {item.isDone ? "✓" : "○"}
+                <span className={item.isDone ? "text-emerald-400" : "text-red-400"}>
+                  {item.isDone ? "✓" : "✗"}
                 </span>
                 <span className={item.isDone ? "text-white" : "text-slate-400"}>
                   {item.requirement.title || item.requirement.type}

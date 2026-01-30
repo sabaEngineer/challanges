@@ -111,12 +111,28 @@ export function CheckinModal({
         return { ...prev, [reqId]: { ...current, isDone: newIsDone } };
       }
       
-      // For other types, set value to target if marking as done
-      if (newIsDone && req.targetValue && !current.value) {
-        return {
-          ...prev,
-          [reqId]: { value: req.targetValue.toString(), isDone: true },
-        };
+      // For other types with target values
+      if (req.targetValue) {
+        const targetValue = Number(req.targetValue);
+        const currentValue = parseFloat(current.value) || 0;
+        
+        if (newIsDone) {
+          // If trying to mark as done
+          if (currentValue >= targetValue) {
+            // Value meets target, allow marking as done
+            return { ...prev, [reqId]: { ...current, isDone: true } };
+          } else if (!current.value) {
+            // No value entered yet, set to target value
+            return { ...prev, [reqId]: { value: req.targetValue.toString(), isDone: true } };
+          } else {
+            // Has partial value that doesn't meet target - don't allow marking as done
+            // Instead, do nothing or show a message
+            return prev;
+          }
+        } else {
+          // Unchecking - always allowed
+          return { ...prev, [reqId]: { ...current, isDone: false } };
+        }
       }
       
       return { ...prev, [reqId]: { ...current, isDone: newIsDone } };
