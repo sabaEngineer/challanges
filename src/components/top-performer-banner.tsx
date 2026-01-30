@@ -1,7 +1,86 @@
 import Link from "next/link";
 import { getYesterdayTopPerformer } from "@/actions/top-performer";
+import { TopPerformerModal } from "./top-performer-modal";
 
+// Small compact banner for feed
 export async function TopPerformerBanner() {
+  const topPerformer = await getYesterdayTopPerformer();
+
+  if (!topPerformer) {
+    return null;
+  }
+
+  const { user, completedCount, challenges, date } = topPerformer;
+
+  return (
+    <>
+      {/* Modal (shows once per day on first visit) */}
+      <TopPerformerModal
+        user={user}
+        completedCount={completedCount}
+        challenges={challenges}
+        date={date}
+      />
+      
+      {/* Compact Banner */}
+      <Link 
+        href={`/profile/${user.id}`}
+        className="block mb-6 group"
+      >
+        <div className="relative overflow-hidden bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-500/20 rounded-xl p-3 hover:border-amber-500/40 transition-all">
+          <div className="flex items-center gap-3">
+            {/* Trophy */}
+            <div className="shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-xl shadow-lg shadow-amber-500/20">
+              🏆
+            </div>
+
+            {/* User Avatar */}
+            {user.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.fullName || "User"}
+                className="w-8 h-8 rounded-full ring-2 ring-amber-500/30"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold ring-2 ring-amber-500/30">
+                {(user.fullName || "U").charAt(0).toUpperCase()}
+              </div>
+            )}
+
+            {/* Text */}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-slate-300">
+                <span className="text-amber-400 font-medium">Yesterday's Top Performer</span>
+                <span className="mx-1.5 text-slate-600">•</span>
+                <span className="text-white font-semibold group-hover:text-amber-400 transition-colors">
+                  {user.fullName || user.username || "Anonymous"}
+                </span>
+              </p>
+            </div>
+
+            {/* Stats badges */}
+            <div className="hidden sm:flex items-center gap-2 shrink-0">
+              <span className="flex items-center gap-1 text-xs px-2 py-1 bg-emerald-500/20 rounded-full text-emerald-400">
+                ✓ {completedCount}
+              </span>
+              <span className="flex items-center gap-1 text-xs px-2 py-1 bg-slate-700/50 rounded-full text-slate-300">
+                🎯 {challenges.length}
+              </span>
+            </div>
+
+            {/* Arrow */}
+            <svg className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      </Link>
+    </>
+  );
+}
+
+// Large detailed banner (for dashboard)
+export async function TopPerformerBannerLarge() {
   const topPerformer = await getYesterdayTopPerformer();
 
   if (!topPerformer) {
