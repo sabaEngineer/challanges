@@ -91,6 +91,7 @@ export function SwipeableFeedPost({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPending, startTransition] = useTransition();
   const [isAnimating, setIsAnimating] = useState(false);
+  const [showReactorsModal, setShowReactorsModal] = useState(false);
   
   const [reactionsState, setReactionsState] = useState<Record<string, {
     counts: Record<ReactionType, number>;
@@ -127,6 +128,7 @@ export function SwipeableFeedPost({
       setIsAnimating(true);
       setCurrentIndex(prev => prev + 1);
       setShowComments(false);
+      setShowReactorsModal(false);
       setTimeout(() => {
         setIsAnimating(false);
       }, 150);
@@ -138,6 +140,7 @@ export function SwipeableFeedPost({
       setIsAnimating(true);
       setCurrentIndex(prev => prev - 1);
       setShowComments(false);
+      setShowReactorsModal(false);
       setTimeout(() => {
         setIsAnimating(false);
       }, 150);
@@ -464,20 +467,88 @@ export function SwipeableFeedPost({
       {(totalReactions > 0 || currentCommentCount > 0) && (
         <div className="px-4 py-2 border-t border-slate-700/50 flex items-center justify-between">
           {totalReactions > 0 ? (
-            <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowReactorsModal(true)}
+              className="flex items-center gap-2 hover:bg-slate-800/30 rounded-full px-2 py-1 -mx-2 transition-colors"
+            >
               <div className="flex -space-x-1">
                 {REACTIONS.filter(r => currentReactions.counts[r.type] > 0).slice(0, 3).map(r => (
                   <span key={r.type} className="text-sm">{r.emoji}</span>
                 ))}
               </div>
               <span className="text-sm text-slate-400">{totalReactions}</span>
-            </div>
+            </button>
           ) : <div />}
           {currentCommentCount > 0 && (
             <button onClick={handleToggleComments} className="text-sm text-slate-400 hover:text-slate-300">
               {currentCommentCount} comment{currentCommentCount !== 1 ? "s" : ""}
             </button>
           )}
+        </div>
+      )}
+
+      {/* Reactors Modal */}
+      {showReactorsModal && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowReactorsModal(false)}
+        >
+          <div 
+            className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-sm max-h-[70vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <h3 className="text-lg font-semibold text-white">Reactions</h3>
+              <button
+                onClick={() => setShowReactorsModal(false)}
+                className="text-slate-400 hover:text-white transition-colors p-1"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            {/* Modal Content */}
+            <div className="overflow-y-auto max-h-[calc(70vh-4rem)]">
+              {REACTIONS.map((reaction) => {
+                const reactors = currentReactions.reactors?.[reaction.type] || [];
+                if (reactors.length === 0) return null;
+                
+                return (
+                  <div key={reaction.type} className="border-b border-slate-800 last:border-b-0">
+                    <div className="px-4 py-2 bg-slate-800/50 flex items-center gap-2">
+                      <span className="text-lg">{reaction.emoji}</span>
+                      <span className="text-sm font-medium text-slate-300">{reaction.label}</span>
+                      <span className="text-xs text-slate-500">({reactors.length})</span>
+                    </div>
+                    <div className="divide-y divide-slate-800/50">
+                      {reactors.map((reactor) => (
+                        <Link
+                          key={reactor.id}
+                          href={`/profile/${reactor.id}`}
+                          onClick={() => setShowReactorsModal(false)}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-slate-800/30 transition-colors"
+                        >
+                          {reactor.avatarUrl ? (
+                            <img src={reactor.avatarUrl} alt="" className="w-8 h-8 rounded-full" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold">
+                              {(reactor.fullName || "U").charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="text-sm text-white">
+                            {reactor.fullName || reactor.username || "Anonymous"}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
