@@ -73,7 +73,6 @@ const REACTIONS: { type: ReactionType; emoji: string; label: string; activeColor
   { type: "fire", emoji: "🔥", label: "Fire", activeColor: "text-amber-400" },
   { type: "heart", emoji: "❤️", label: "Love", activeColor: "text-red-400" },
   { type: "strong", emoji: "💪", label: "Strong", activeColor: "text-emerald-400" },
-  { type: "smile", emoji: "😊", label: "Nice", activeColor: "text-yellow-400" },
   { type: "kudos", emoji: "👏", label: "Kudos", activeColor: "text-blue-400" },
   { type: "not_bad", emoji: "👍", label: "Not Bad", activeColor: "text-violet-400" },
 ];
@@ -455,9 +454,9 @@ export function FeedPost({
                     <span className={item.isDone ? "text-white" : "text-slate-400"}>
                       {item.requirement.title || item.requirement.type}
                     </span>
-                    {item.requirement.type !== "yes_no" && item.value !== null && (
+                    {item.requirement.type !== "yes_no" && (
                       <span className="flex items-center gap-1 text-slate-400">
-                        {item.value}{item.requirement.targetValue ? `/${item.requirement.targetValue}` : ""} {formatUnit(item.requirement.unit)}
+                        {item.value ?? 0}{item.requirement.targetValue ? `/${item.requirement.targetValue}` : ""} {formatUnit(item.requirement.unit)}
                         {isOverAchieved && (
                           <span className="text-xs px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-medium">
                             +{overAmount}

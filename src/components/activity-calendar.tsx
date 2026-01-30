@@ -407,9 +407,9 @@ export function ActivityCalendar({ activities, compact = false }: ActivityCalend
                                     <span className={item.isDone ? "text-white" : "text-slate-400"}>
                                       {item.requirement.title || item.requirement.type}
                                     </span>
-                                    {item.requirement.type !== "yes_no" && item.value !== null && (
+                                    {item.requirement.type !== "yes_no" && (
                                       <span className="text-slate-400 text-xs">
-                                        {item.value}{item.requirement.targetValue ? `/${item.requirement.targetValue}` : ""} {formatUnit(item.requirement.unit)}
+                                        {item.value ?? 0}{item.requirement.targetValue ? `/${item.requirement.targetValue}` : ""} {formatUnit(item.requirement.unit)}
                                       </span>
                                     )}
                                   </div>

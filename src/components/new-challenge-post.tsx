@@ -67,7 +67,6 @@ const REACTIONS: { type: ReactionType; emoji: string; label: string; activeColor
   { type: "fire", emoji: "🔥", label: "Fire", activeColor: "text-amber-400" },
   { type: "heart", emoji: "❤️", label: "Love", activeColor: "text-red-400" },
   { type: "strong", emoji: "💪", label: "Strong", activeColor: "text-emerald-400" },
-  { type: "smile", emoji: "😊", label: "Nice", activeColor: "text-yellow-400" },
   { type: "kudos", emoji: "👏", label: "Kudos", activeColor: "text-blue-400" },
   { type: "not_bad", emoji: "👍", label: "Not Bad", activeColor: "text-violet-400" },
 ];
