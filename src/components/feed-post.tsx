@@ -611,8 +611,8 @@ export function FeedPost({
       )}
 
       {/* Post Footer - Reactions & Comment Button */}
-      <div className="px-4 py-3 border-t border-slate-700/50 flex items-center justify-between">
-        <div className="flex items-center gap-1">
+      <div className="px-0 sm:px-4 py-2 sm:py-3 border-t border-slate-700/50 flex items-center justify-between">
+        <div className="flex items-center gap-0.5 sm:gap-1">
           {REACTIONS.map((reaction) => {
             const isReacted = reactions.userReacted.includes(reaction.type);
             const count = reactions.counts[reaction.type];
@@ -624,7 +624,7 @@ export function FeedPost({
                 <button
                   onClick={() => handleReaction(reaction.type)}
                   disabled={isPending}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all text-sm ${
+                  className={`flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-full transition-all text-sm ${
                     isReacted
                       ? `bg-slate-700/50 ${reaction.activeColor}`
                       : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-300"
@@ -710,7 +710,7 @@ export function FeedPost({
         </div>
         <button
           onClick={handleCommentClick}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-slate-400 hover:bg-slate-800/50 hover:text-slate-300 transition-all text-sm"
+          className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-slate-400 hover:bg-slate-800/50 hover:text-slate-300 transition-all text-sm"
         >
           <span>💬</span>
           <span>Comment</span>
