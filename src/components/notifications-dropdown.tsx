@@ -6,7 +6,8 @@ import {
   getNotifications, 
   markNotificationAsRead, 
   markAllNotificationsAsRead,
-  deleteNotification 
+  deleteNotification,
+  getUnreadNotificationsCount
 } from "@/actions/notifications";
 import { acceptInvitation, rejectInvitation } from "@/actions/members";
 
@@ -42,7 +43,9 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
   const [unreadCount, setUnreadCount] = useState(initialCount);
   const [isLoading, setIsLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [hasNewNotification, setHasNewNotification] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const prevCountRef = useRef(initialCount);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -54,6 +57,36 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Poll for new notifications every 30 seconds
+  useEffect(() => {
+    const pollNotifications = async () => {
+      try {
+        const count = await getUnreadNotificationsCount();
+        
+        // Check if there are new notifications
+        if (count > prevCountRef.current) {
+          setHasNewNotification(true);
+          // Reset the animation after 3 seconds
+          setTimeout(() => setHasNewNotification(false), 3000);
+          // Clear cached notifications so they reload on next open
+          if (!isOpen) {
+            setNotifications([]);
+          }
+        }
+        
+        prevCountRef.current = count;
+        setUnreadCount(count);
+      } catch (error) {
+        console.error("Failed to poll notifications:", error);
+      }
+    };
+
+    // Set up interval
+    const interval = setInterval(pollNotifications, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [isOpen]);
 
   // Load notifications when dropdown opens
   useEffect(() => {
@@ -189,9 +222,14 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
           />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
+          <span className={`absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full ${
+            hasNewNotification ? "animate-bounce" : ""
+          }`}>
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
+        )}
+        {hasNewNotification && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full animate-ping opacity-75" />
         )}
       </button>
 

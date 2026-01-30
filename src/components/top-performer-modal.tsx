@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 
-interface TopPerformerModalProps {
+interface Performer {
   user: {
     id: string;
     fullName: string | null;
@@ -15,13 +14,20 @@ interface TopPerformerModalProps {
     id: string;
     title: string;
   }[];
+}
+
+interface TopPerformerModalProps {
+  performers: Performer[];
+  isTie: boolean;
   date: Date;
 }
 
-export function TopPerformerModal({ user, completedCount, challenges, date }: TopPerformerModalProps) {
+export function TopPerformerModal({ performers, isTie, date }: TopPerformerModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [stage, setStage] = useState<"intro" | "reveal" | "stats" | "closing">("intro");
   const [hasSeenToday, setHasSeenToday] = useState(true);
+
+  const firstPerformer = performers[0];
 
   useEffect(() => {
     // Check if user has already seen this today
@@ -96,9 +102,9 @@ export function TopPerformerModal({ user, completedCount, challenges, date }: To
           stage === "intro" ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 absolute"
         }`}>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-            Yesterday's Top Performer
+            Yesterday's Top Performer{isTie ? "s" : ""}
           </h2>
-          <p className="text-amber-400 text-lg">is...</p>
+          <p className="text-amber-400 text-lg">{isTie ? "are..." : "is..."}</p>
         </div>
 
         {/* Reveal Name */}
@@ -111,27 +117,50 @@ export function TopPerformerModal({ user, completedCount, challenges, date }: To
             <>
               <p className="text-sm text-slate-400 mb-3">{formatDate(date)}</p>
               
-              {/* User Avatar */}
-              <div className="mb-4">
-                {user.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.fullName || "User"}
-                    className="w-20 h-20 mx-auto rounded-full ring-4 ring-amber-500 shadow-xl"
-                  />
-                ) : (
-                  <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-3xl font-bold ring-4 ring-amber-500/50">
-                    {(user.fullName || "U").charAt(0).toUpperCase()}
-                  </div>
-                )}
+              {/* User Avatars */}
+              <div className="flex justify-center mb-4">
+                <div className={`flex ${isTie ? "-space-x-3" : ""}`}>
+                  {performers.slice(0, 3).map((performer, index) => (
+                    <div key={performer.user.id} style={{ zIndex: 10 - index }}>
+                      {performer.user.avatarUrl ? (
+                        <img
+                          src={performer.user.avatarUrl}
+                          alt={performer.user.fullName || "User"}
+                          className="w-20 h-20 rounded-full ring-4 ring-amber-500 shadow-xl"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-3xl font-bold ring-4 ring-amber-500/50">
+                          {(performer.user.fullName || "U").charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {/* Name */}
+              {/* Tie indicator */}
+              {isTie && (
+                <p className="text-amber-400 text-sm mb-2 animate-pulse">🤝 It's a tie!</p>
+              )}
+
+              {/* Names */}
               <h2 className="text-3xl sm:text-4xl font-bold text-white mb-1 animate-pulse">
-                {user.fullName || user.username || "Anonymous"}
+                {isTie ? (
+                  <>
+                    {performers.slice(0, 2).map((p, i) => (
+                      <span key={p.user.id}>
+                        {p.user.fullName || p.user.username || "Anonymous"}
+                        {i < Math.min(performers.length, 2) - 1 && <span className="text-amber-400"> & </span>}
+                      </span>
+                    ))}
+                    {performers.length > 2 && <span className="text-slate-400 text-xl"> +{performers.length - 2} more</span>}
+                  </>
+                ) : (
+                  firstPerformer.user.fullName || firstPerformer.user.username || "Anonymous"
+                )}
               </h2>
-              {user.username && user.fullName && (
-                <p className="text-slate-400 text-sm mb-4">@{user.username}</p>
+              {!isTie && firstPerformer.user.username && firstPerformer.user.fullName && (
+                <p className="text-slate-400 text-sm mb-4">@{firstPerformer.user.username}</p>
               )}
             </>
           )}
@@ -148,21 +177,21 @@ export function TopPerformerModal({ user, completedCount, challenges, date }: To
               {/* Check-ins count */}
               <div className="flex items-center justify-center gap-2 text-lg">
                 <span className="text-emerald-400">✓</span>
-                <span className="text-white font-semibold">{completedCount}</span>
-                <span className="text-slate-300">check-ins completed</span>
+                <span className="text-white font-semibold">{firstPerformer.completedCount}</span>
+                <span className="text-slate-300">check-ins completed {isTie ? "each" : ""}</span>
               </div>
 
               {/* Challenges count */}
               <div className="flex items-center justify-center gap-2 text-lg">
                 <span className="text-amber-400">🎯</span>
-                <span className="text-white font-semibold">{challenges.length}</span>
-                <span className="text-slate-300">challenge{challenges.length !== 1 ? "s" : ""}</span>
+                <span className="text-white font-semibold">{firstPerformer.challenges.length}</span>
+                <span className="text-slate-300">challenge{firstPerformer.challenges.length !== 1 ? "s" : ""}</span>
               </div>
 
               {/* Challenge names */}
-              {challenges.length > 0 && (
+              {firstPerformer.challenges.length > 0 && (
                 <div className="flex flex-wrap justify-center gap-2 mt-4">
-                  {challenges.slice(0, 3).map((challenge) => (
+                  {firstPerformer.challenges.slice(0, 3).map((challenge) => (
                     <span
                       key={challenge.id}
                       className="text-xs px-3 py-1.5 bg-slate-800/80 border border-slate-700 rounded-full text-slate-300"
@@ -170,8 +199,8 @@ export function TopPerformerModal({ user, completedCount, challenges, date }: To
                       {challenge.title}
                     </span>
                   ))}
-                  {challenges.length > 3 && (
-                    <span className="text-xs text-slate-500">+{challenges.length - 3} more</span>
+                  {firstPerformer.challenges.length > 3 && (
+                    <span className="text-xs text-slate-500">+{firstPerformer.challenges.length - 3} more</span>
                   )}
                 </div>
               )}

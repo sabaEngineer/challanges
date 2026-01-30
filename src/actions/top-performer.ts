@@ -18,7 +18,13 @@ export interface TopPerformer {
   date: Date;
 }
 
-export async function getYesterdayTopPerformer(): Promise<TopPerformer | null> {
+export interface TopPerformersResult {
+  performers: TopPerformer[];
+  isTie: boolean;
+  date: Date;
+}
+
+export async function getYesterdayTopPerformers(): Promise<TopPerformersResult | null> {
   // Get yesterday's date range
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -66,6 +72,8 @@ export async function getYesterdayTopPerformer(): Promise<TopPerformer | null> {
     completedCount: number;
     challenges: Set<string>;
     challengeDetails: Map<string, { id: string; title: string }>;
+    score: number;
+    earliestCheckin: Date;
   }>();
 
   checkins.forEach((checkin) => {
@@ -77,6 +85,8 @@ export async function getYesterdayTopPerformer(): Promise<TopPerformer | null> {
         completedCount: 0,
         challenges: new Set(),
         challengeDetails: new Map(),
+        score: 0,
+        earliestCheckin: checkin.createdAt,
       });
     }
     
@@ -87,32 +97,65 @@ export async function getYesterdayTopPerformer(): Promise<TopPerformer | null> {
     }
     stats.challenges.add(checkin.challengeId);
     stats.challengeDetails.set(checkin.challengeId, checkin.challenge);
-  });
-
-  // Find the top performer (most completed check-ins, then most total check-ins)
-  let topPerformer: typeof userStats extends Map<string, infer V> ? V : never = null!;
-  let maxScore = -1;
-
-  userStats.forEach((stats) => {
-    // Score: completed check-ins * 2 + total check-ins
-    const score = stats.completedCount * 2 + stats.checkinCount;
-    if (score > maxScore) {
-      maxScore = score;
-      topPerformer = stats;
+    // Track earliest check-in for tiebreaker
+    if (checkin.createdAt < stats.earliestCheckin) {
+      stats.earliestCheckin = checkin.createdAt;
     }
   });
 
-  if (!topPerformer) {
+  // Calculate scores
+  userStats.forEach((stats) => {
+    stats.score = stats.completedCount * 2 + stats.checkinCount;
+  });
+
+  // Find max score
+  let maxScore = -1;
+  userStats.forEach((stats) => {
+    if (stats.score > maxScore) {
+      maxScore = stats.score;
+    }
+  });
+
+  // Find all users with the max score (ties)
+  const topPerformers: TopPerformer[] = [];
+  userStats.forEach((stats) => {
+    if (stats.score === maxScore) {
+      topPerformers.push({
+        user: stats.user,
+        checkinCount: stats.checkinCount,
+        completedCount: stats.completedCount,
+        challenges: Array.from(stats.challengeDetails.values()),
+        date: yesterday,
+      });
+    }
+  });
+
+  if (topPerformers.length === 0) {
     return null;
   }
 
+  // Sort by: more challenges first, then alphabetically by name
+  topPerformers.sort((a, b) => {
+    if (b.challenges.length !== a.challenges.length) {
+      return b.challenges.length - a.challenges.length;
+    }
+    return (a.user.fullName || "").localeCompare(b.user.fullName || "");
+  });
+
   return {
-    user: topPerformer.user,
-    checkinCount: topPerformer.checkinCount,
-    completedCount: topPerformer.completedCount,
-    challenges: Array.from(topPerformer.challengeDetails.values()),
+    performers: topPerformers,
+    isTie: topPerformers.length > 1,
     date: yesterday,
   };
+}
+
+// Keep the old function for backward compatibility
+export async function getYesterdayTopPerformer(): Promise<TopPerformer | null> {
+  const result = await getYesterdayTopPerformers();
+  if (!result || result.performers.length === 0) {
+    return null;
+  }
+  return result.performers[0];
 }
 
 // Get top performers for the last N days
