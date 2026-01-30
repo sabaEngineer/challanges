@@ -234,7 +234,7 @@ export function FeedbackList({ feedback: initialFeedback }: FeedbackListProps) {
                       {STATUS_OPTIONS.map((status) => (
                         <Button
                           key={status.value}
-                          variant={item.status === status.value ? "default" : "outline"}
+                          variant={item.status === status.value ? "primary" : "outline"}
                           size="sm"
                           onClick={() => handleStatusUpdate(item.id, status.value)}
                           disabled={updating === item.id}
