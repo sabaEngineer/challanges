@@ -54,7 +54,7 @@ async function notifyChallengeMembersOfCheckin(
 
 interface CheckinItemInput {
   requirementId: string;
-  value?: number;
+  value?: number | string | null; // Allow string for Next.js serialization edge cases
   isDone: boolean;
 }
 
