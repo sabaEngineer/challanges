@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notifications";
 
-export type ReactionType = "fire" | "strong" | "kudos" | "not_bad";
+export type ReactionType = "fire" | "strong" | "kudos" | "not_bad" | "heart" | "smile";
 
 // ============ CHALLENGE REACTIONS ============
 
@@ -91,9 +91,9 @@ export async function getChallengeReactions(challengeId: string) {
   });
 
   const result: ReactionWithUsers = {
-    counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0 },
+    counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0, heart: 0, smile: 0 },
     userReacted: [],
-    reactors: { fire: [], strong: [], kudos: [], not_bad: [] },
+    reactors: { fire: [], strong: [], kudos: [], not_bad: [], heart: [], smile: [] },
   };
 
   reactions.forEach((r) => {
@@ -134,9 +134,9 @@ export async function getMultipleChallengeReactions(challengeIds: string[]) {
 
   challengeIds.forEach((id) => {
     result[id] = {
-      counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0 },
+      counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0, heart: 0, smile: 0 },
       userReacted: [],
-      reactors: { fire: [], strong: [], kudos: [], not_bad: [] },
+      reactors: { fire: [], strong: [], kudos: [], not_bad: [], heart: [], smile: [] },
     };
   });
 

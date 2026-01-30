@@ -89,9 +89,9 @@ export function NewChallengePost({
 }: NewChallengePostProps) {
   const [isPending, startTransition] = useTransition();
   const [reactions, setReactions] = useState(initialReactions || {
-    counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0 },
+    counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0, heart: 0, smile: 0 },
     userReacted: [] as ReactionType[],
-    reactors: { fire: [], strong: [], kudos: [], not_bad: [] } as Record<ReactionType, ReactionUser[]>,
+    reactors: { fire: [], strong: [], kudos: [], not_bad: [], heart: [], smile: [] } as Record<ReactionType, ReactionUser[]>,
   });
 
   // Comments state
