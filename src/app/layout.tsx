@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
+import { FeedbackWrapper } from "@/components/feedback-wrapper";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -27,6 +28,7 @@ export default function RootLayout({
         <main className="pt-16">
           {children}
         </main>
+        <FeedbackWrapper />
       </body>
     </html>
   );

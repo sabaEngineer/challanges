@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
@@ -118,6 +118,38 @@ export function SwipeableFeedPost({
   const [newComment, setNewComment] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+  // Common emojis for quick access
+  const EMOJI_LIST = [
+    "😀", "😂", "🥹", "😍", "🤩", "😎", "🥳", "😊",
+    "💪", "🔥", "⭐", "🎉", "👏", "🙌", "💯", "❤️",
+    "🏆", "🎯", "✨", "🚀", "💥", "👍", "🤝", "🙏",
+  ];
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    
+    if (showEmojiPicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+        document.removeEventListener("touchstart", handleClickOutside);
+      };
+    }
+  }, [showEmojiPicker]);
+
+  const insertEmoji = (emoji: string) => {
+    setNewComment(prev => prev + emoji);
+    commentInputRef.current?.focus();
+  };
 
   const currentCheckin = checkins[currentIndex];
   const currentReactions = reactionsState[currentCheckin.id] || currentCheckin.reactions;
@@ -622,7 +654,35 @@ export function SwipeableFeedPost({
           </div>
 
           <form onSubmit={handleSubmitComment} className="p-4 pt-0">
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-2 items-center relative">
+              {/* Emoji Picker */}
+              <div className="relative" ref={emojiPickerRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className="p-2 text-slate-400 hover:text-amber-400 transition-colors rounded-full hover:bg-slate-800"
+                >
+                  <span className="text-lg">😊</span>
+                </button>
+                
+                {showEmojiPicker && (
+                  <div className="absolute bottom-full left-0 mb-2 bg-slate-800 border border-slate-700 rounded-xl p-3 shadow-xl z-50 w-64">
+                    <div className="grid grid-cols-8 gap-1">
+                      {EMOJI_LIST.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => insertEmoji(emoji)}
+                          className="w-8 h-8 flex items-center justify-center text-lg hover:bg-slate-700 rounded transition-colors"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
               <input
                 ref={commentInputRef}
                 type="text"

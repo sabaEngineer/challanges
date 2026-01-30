@@ -38,6 +38,7 @@ model User {
   challengeReactions    ChallengeReaction[]
   challengeComments     ChallengeComment[]
   challengeCommentLikes ChallengeCommentLike[]
+  feedback              Feedback[]
 
   @@map("users")
 }
@@ -362,4 +363,41 @@ model BookLendRequest {
   requester User @relation("BookRequester", fields: [requesterId], references: [id], onDelete: Cascade)
 
   @@map("book_lend_requests")
+}
+
+// Feedback status
+enum FeedbackStatus {
+  pending
+  reviewed
+  planned
+  completed
+  rejected
+
+  @@map("feedback_status")
+}
+
+// Feedback type
+enum FeedbackType {
+  bug
+  feature
+  improvement
+  other
+
+  @@map("feedback_type")
+}
+
+model Feedback {
+  id        String         @id @default(uuid())
+  userId    String         @map("user_id")
+  type      FeedbackType
+  title     String
+  content   String         @db.Text
+  status    FeedbackStatus @default(pending)
+  adminNote String?        @map("admin_note") @db.Text
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("feedback")
 }
