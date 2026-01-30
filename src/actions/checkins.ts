@@ -124,32 +124,73 @@ export async function createOrUpdateCheckin(
       return item;
     }
 
-    // For yes_no type, trust the client's isDone
+    // For yes_no type, trust the client's isDone (user explicitly checks the box)
     if (requirement.type === "yes_no") {
       return item;
     }
 
-    // For other types, verify that value meets targetValue
-    if (requirement.targetValue && item.value !== undefined) {
-      const targetValue = Number(requirement.targetValue);
-      const actualValue = Number(item.value);
-      const actuallyDone = actualValue >= targetValue;
-      
+    // Check if value is missing/invalid
+    // Next.js serializes undefined as "$undefined" string
+    const hasNoValue = item.value === undefined || 
+                       item.value === null || 
+                       item.value === "$undefined" ||
+                       (typeof item.value === "string" && item.value.trim() === "");
+    
+    if (hasNoValue) {
       return {
         ...item,
-        isDone: actuallyDone, // Override client's isDone with server-verified value
+        value: null, // Normalize to null
+        isDone: false,
       };
     }
 
-    // No target value or no value provided - mark as not done unless explicitly done
+    // Parse the actual numeric value
+    const actualValue = Number(item.value);
+    
+    // If parsing failed (NaN), mark as not done
+    if (isNaN(actualValue)) {
+      return {
+        ...item,
+        value: null,
+        isDone: false,
+      };
+    }
+
+    // For types with targetValue, verify that value meets the target
+    if (requirement.targetValue) {
+      const targetValue = Number(requirement.targetValue);
+      const actuallyDone = targetValue > 0 && actualValue >= targetValue;
+      
+      return {
+        ...item,
+        value: actualValue,
+        isDone: actuallyDone,
+      };
+    }
+
+    // For types without targetValue but with a value, consider done only if value > 0
     return {
       ...item,
-      isDone: item.isDone && item.value !== undefined,
+      value: actualValue,
+      isDone: actualValue > 0,
     };
   });
 
   // Check if all items are done (using validated values)
   const allDone = validatedItems.every((item) => item.isDone);
+
+  // Log validation results for debugging (use console.error to ensure visibility)
+  console.error("=== CHECKIN DEBUG ===");
+  console.error("Validated items:", JSON.stringify(validatedItems.map(item => {
+    const req = challenge.requirements.find(r => r.id === item.requirementId);
+    return {
+      requirementId: item.requirementId,
+      type: req?.type,
+      targetValue: req?.targetValue?.toString(),
+      value: item.value,
+      isDone: item.isDone,
+    };
+  }), null, 2));
 
   try {
     console.log("Creating/updating checkin for date:", checkinDate, "allDone:", allDone);
@@ -183,6 +224,9 @@ export async function createOrUpdateCheckin(
     // Create or update checkin items (using validated items)
     console.log("Creating/updating", validatedItems.length, "checkin items");
     for (const item of validatedItems) {
+      // Ensure value is properly typed for Prisma (number or null)
+      const valueToSave = typeof item.value === "number" ? item.value : null;
+      
       const checkinItem = await db.dailyCheckinItem.upsert({
         where: {
           checkinId_requirementId: {
@@ -193,15 +237,15 @@ export async function createOrUpdateCheckin(
         create: {
           checkinId: checkin.id,
           requirementId: item.requirementId,
-          value: item.value ?? null,
+          value: valueToSave,
           isDone: item.isDone,
         },
         update: {
-          value: item.value ?? null,
+          value: valueToSave,
           isDone: item.isDone,
         },
       });
-      console.log("Item created/updated:", checkinItem.id, "isDone:", checkinItem.isDone, "value:", item.value);
+      console.error("Item saved:", checkinItem.id, "| isDone:", checkinItem.isDone, "| value:", valueToSave);
     }
 
     // Always update streak to ensure it's accurate (handles edits that make check-ins incomplete)

@@ -64,10 +64,23 @@ export function CheckinModal({
       const existingItem = existingCheckin?.items.find(
         (i) => i.requirementId === req.id
       );
-      initial[req.id] = {
-        value: existingItem?.value?.toString() || "",
-        isDone: existingItem?.isDone || false,
-      };
+      const value = existingItem?.value?.toString() || "";
+      
+      // Recalculate isDone based on actual value vs target (don't trust stored isDone)
+      let isDone = false;
+      if (req.type === "yes_no") {
+        isDone = existingItem?.isDone || false;
+      } else if (value) {
+        const numValue = parseFloat(value) || 0;
+        const targetValue = req.targetValue ? Number(req.targetValue) : null;
+        if (targetValue !== null && targetValue > 0) {
+          isDone = numValue >= targetValue;
+        } else {
+          isDone = numValue > 0;
+        }
+      }
+      
+      initial[req.id] = { value, isDone };
     });
     return initial;
   });
@@ -88,8 +101,8 @@ export function CheckinModal({
       return item.isDone ? 100 : 0;
     }
     const numValue = parseFloat(item.value) || 0;
-    const targetValue = req.targetValue ? Number(req.targetValue) : 0;
-    if (targetValue === 0) return 0;
+    const targetValue = req.targetValue ? Number(req.targetValue) : null;
+    if (targetValue === null || targetValue <= 0) return numValue > 0 ? 50 : 0; // No target, show 50% if any value
     return Math.min(100, Math.round((numValue / targetValue) * 100));
   };
 
@@ -111,28 +124,21 @@ export function CheckinModal({
         return { ...prev, [reqId]: { ...current, isDone: newIsDone } };
       }
       
-      // For other types with target values
-      if (req.targetValue) {
-        const targetValue = Number(req.targetValue);
-        const currentValue = parseFloat(current.value) || 0;
-        
-        if (newIsDone) {
-          // If trying to mark as done
-          if (currentValue >= targetValue) {
-            // Value meets target, allow marking as done
-            return { ...prev, [reqId]: { ...current, isDone: true } };
-          } else if (!current.value) {
-            // No value entered yet, set to target value
-            return { ...prev, [reqId]: { value: req.targetValue.toString(), isDone: true } };
-          } else {
-            // Has partial value that doesn't meet target - don't allow marking as done
-            // Instead, do nothing or show a message
-            return prev;
-          }
-        } else {
-          // Unchecking - always allowed
-          return { ...prev, [reqId]: { ...current, isDone: false } };
-        }
+      // For numeric types, isDone is ONLY determined by the value meeting the target
+      // Checkbox click doesn't change isDone directly - user must enter a value
+      // This prevents accidental completion without entering data
+      const targetValue = req.targetValue ? Number(req.targetValue) : null;
+      const currentValue = parseFloat(current.value) || 0;
+      
+      if (targetValue !== null && targetValue > 0) {
+        // isDone is automatically set based on value vs target
+        // Clicking checkbox has no effect for numeric types with targets
+        return prev;
+      }
+      
+      // For requirements without a target, allow manual toggle only if value > 0
+      if (newIsDone && currentValue <= 0) {
+        return prev; // Don't allow marking done without a value
       }
       
       return { ...prev, [reqId]: { ...current, isDone: newIsDone } };
@@ -141,8 +147,11 @@ export function CheckinModal({
 
   const handleValueChange = (reqId: string, value: string, req: Requirement) => {
     const numValue = parseFloat(value) || 0;
-    const targetValue = req.targetValue ? Number(req.targetValue) : 0;
-    const isDone = numValue >= targetValue;
+    const targetValue = req.targetValue ? Number(req.targetValue) : null;
+    
+    // Only mark as done if there's a target value and the entered value meets it
+    // If no target value, require explicit checkbox click to mark as done
+    const isDone = targetValue !== null && targetValue > 0 && numValue >= targetValue;
     
     setItems((prev) => ({
       ...prev,
@@ -153,18 +162,24 @@ export function CheckinModal({
   const handleSubmit = (forceComplete = false) => {
     const checkinItems = requirements.map((req) => {
       const item = items[req.id];
-      // If forceComplete is true, mark all items as done
-      if (forceComplete) {
-        return {
-          requirementId: req.id,
-          value: item.value ? parseFloat(item.value) : (req.targetValue ? Number(req.targetValue) : undefined),
-          isDone: true,
-        };
+      const numValue = item.value ? parseFloat(item.value) : undefined;
+      
+      // Calculate isDone based on actual values, not auto-fill
+      let isDone = item.isDone;
+      if (forceComplete && req.type !== "yes_no") {
+        // For forceComplete, verify the value actually meets target
+        const targetValue = req.targetValue ? Number(req.targetValue) : null;
+        if (targetValue !== null && targetValue > 0) {
+          isDone = (numValue ?? 0) >= targetValue;
+        } else {
+          isDone = (numValue ?? 0) > 0;
+        }
       }
+      
       return {
         requirementId: req.id,
-        value: item.value ? parseFloat(item.value) : undefined,
-        isDone: item.isDone,
+        value: numValue,
+        isDone: forceComplete ? isDone : item.isDone,
       };
     });
 
@@ -201,18 +216,8 @@ export function CheckinModal({
   };
 
   const handleMarkComplete = () => {
-    // Update all items to be done with their current values (or target values if empty)
-    const updatedItems: Record<string, { value: string; isDone: boolean }> = {};
-    requirements.forEach((req) => {
-      const current = items[req.id];
-      updatedItems[req.id] = {
-        value: current.value || (req.targetValue?.toString() || ""),
-        isDone: true,
-      };
-    });
-    setItems(updatedItems);
-    
-    // Submit with forceComplete
+    // Submit the check-in to publish it to the feed
+    // Each requirement's isDone status is based on actual values, not forced
     handleSubmit(true);
   };
 
