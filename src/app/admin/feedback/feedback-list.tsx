@@ -159,7 +159,7 @@ export function FeedbackList({ feedback: initialFeedback }: FeedbackListProps) {
                       <img
                         src={item.user.avatarUrl}
                         alt={item.user.fullName || "User"}
-                        className="w-10 h-10 rounded-full"
+                        className="w-10 h-10 rounded-full object-cover"
                       />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold">

@@ -353,7 +353,7 @@ export default async function ChallengePage({ params }: PageProps) {
                     <img
                       src={challenge.creator.avatarUrl}
                       alt={challenge.creator.username || "Creator"}
-                      className="w-8 h-8 rounded-full"
+                      className="w-8 h-8 rounded-full object-cover"
                     />
                   )}
                   <span>

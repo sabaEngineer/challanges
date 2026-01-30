@@ -143,7 +143,7 @@ export default async function AdminUsersPage() {
                           <img
                             src={u.avatarUrl}
                             alt={u.fullName || "User"}
-                            className="w-10 h-10 rounded-full"
+                            className="w-10 h-10 rounded-full object-cover"
                           />
                         ) : (
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold">
@@ -224,7 +224,7 @@ export default async function AdminUsersPage() {
                   >
                     <div className="flex items-center gap-2">
                       {u.avatarUrl ? (
-                        <img src={u.avatarUrl} alt="" className="w-6 h-6 rounded-full" />
+                        <img src={u.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
                       ) : (
                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-xs font-bold">
                           {(u.fullName || "U").charAt(0).toUpperCase()}
@@ -253,7 +253,7 @@ export default async function AdminUsersPage() {
                   >
                     <div className="flex items-center gap-2">
                       {u.avatarUrl ? (
-                        <img src={u.avatarUrl} alt="" className="w-6 h-6 rounded-full" />
+                        <img src={u.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
                       ) : (
                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-xs font-bold">
                           {(u.fullName || "U").charAt(0).toUpperCase()}
@@ -278,7 +278,7 @@ export default async function AdminUsersPage() {
                 >
                   <div className="flex items-center gap-2">
                     {u.avatarUrl ? (
-                      <img src={u.avatarUrl} alt="" className="w-6 h-6 rounded-full" />
+                      <img src={u.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
                     ) : (
                       <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-xs font-bold">
                         {(u.fullName || "U").charAt(0).toUpperCase()}

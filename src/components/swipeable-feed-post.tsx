@@ -77,7 +77,9 @@ interface SwipeableFeedPostProps {
 
 const REACTIONS: { type: ReactionType; emoji: string; label: string; activeColor: string }[] = [
   { type: "fire", emoji: "🔥", label: "Fire", activeColor: "text-amber-400" },
+  { type: "heart", emoji: "❤️", label: "Love", activeColor: "text-red-400" },
   { type: "strong", emoji: "💪", label: "Strong", activeColor: "text-emerald-400" },
+  { type: "smile", emoji: "😊", label: "Nice", activeColor: "text-yellow-400" },
   { type: "kudos", emoji: "👏", label: "Kudos", activeColor: "text-blue-400" },
   { type: "not_bad", emoji: "👍", label: "Not Bad", activeColor: "text-violet-400" },
 ];
@@ -415,7 +417,7 @@ export function SwipeableFeedPost({
       <div className="flex items-center gap-3 p-4">
         <Link href={`/profile/${user.id}`} className="shrink-0">
           {user.avatarUrl ? (
-            <img src={user.avatarUrl} alt={user.fullName || "User"} className="w-12 h-12 rounded-full ring-2 ring-slate-700" />
+            <img src={user.avatarUrl} alt={user.fullName || "User"} className="w-12 h-12 rounded-full ring-2 ring-slate-700 object-cover" />
           ) : (
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-lg font-bold">
               {(user.fullName || "U").charAt(0).toUpperCase()}
@@ -475,21 +477,34 @@ export function SwipeableFeedPost({
 
           {/* Requirements */}
           <div className="space-y-1.5 mb-4">
-            {currentCheckin.items.map((item) => (
-              <div key={item.id} className="flex items-center gap-2 text-sm">
-                <span className={item.isDone ? "text-emerald-400" : "text-red-400"}>
-                  {item.isDone ? "✓" : "✗"}
-                </span>
-                <span className={item.isDone ? "text-white" : "text-slate-400"}>
-                  {item.requirement.title || item.requirement.type}
-                </span>
-                {item.requirement.type !== "yes_no" && item.value !== null && (
-                  <span className="text-slate-500 ml-auto">
-                    {item.value}{item.requirement.targetValue ? `/${item.requirement.targetValue}` : ""} {formatUnit(item.requirement.unit)}
+            {currentCheckin.items.map((item) => {
+              const isOverAchieved = item.requirement.type !== "yes_no" && 
+                item.value !== null && 
+                item.requirement.targetValue !== null && 
+                item.value > item.requirement.targetValue;
+              const overAmount = isOverAchieved ? item.value! - item.requirement.targetValue! : 0;
+              
+              return (
+                <div key={item.id} className="flex items-center gap-2 text-sm">
+                  <span className={item.isDone ? "text-emerald-400" : "text-red-400"}>
+                    {item.isDone ? "✓" : "✗"}
                   </span>
-                )}
-              </div>
-            ))}
+                  <span className={item.isDone ? "text-white" : "text-slate-400"}>
+                    {item.requirement.title || item.requirement.type}
+                  </span>
+                  {item.requirement.type !== "yes_no" && item.value !== null && (
+                    <span className="ml-auto flex items-center gap-1 text-slate-500">
+                      {item.value}{item.requirement.targetValue ? `/${item.requirement.targetValue}` : ""} {formatUnit(item.requirement.unit)}
+                      {isOverAchieved && (
+                        <span className="text-xs px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-medium">
+                          +{overAmount}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Note */}
@@ -528,7 +543,7 @@ export function SwipeableFeedPost({
             </button>
           ) : <div />}
           {currentCommentCount > 0 && (
-            <button onClick={handleToggleComments} className="text-sm text-slate-400 hover:text-slate-300">
+            <button onClick={handleToggleComments} className="text-sm text-slate-400 hover:text-slate-300 transition-colors">
               {currentCommentCount} comment{currentCommentCount !== 1 ? "s" : ""}
             </button>
           )}
@@ -580,7 +595,7 @@ export function SwipeableFeedPost({
                           className="flex items-center gap-3 px-4 py-3 hover:bg-slate-800/30 transition-colors"
                         >
                           {reactor.avatarUrl ? (
-                            <img src={reactor.avatarUrl} alt="" className="w-8 h-8 rounded-full" />
+                            <img src={reactor.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold">
                               {(reactor.fullName || "U").charAt(0).toUpperCase()}
@@ -619,7 +634,7 @@ export function SwipeableFeedPost({
             );
           })}
         </div>
-        <button onClick={handleToggleComments} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-slate-400 hover:bg-slate-800/50 text-sm">
+        <button onClick={handleToggleComments} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-slate-400 hover:bg-slate-800/50 hover:text-slate-300 transition-all text-sm">
           <span>💬</span>
           <span>Comment</span>
         </button>
@@ -627,7 +642,7 @@ export function SwipeableFeedPost({
 
       {/* Comments Section */}
       {showComments && (
-        <div className="border-t border-slate-700/50">
+        <div>
           <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
             {loadingComments ? (
               <div className="text-center py-4 text-slate-400 text-sm">Loading comments...</div>
@@ -638,7 +653,7 @@ export function SwipeableFeedPost({
                 <div key={comment.id} className="flex gap-3">
                   <Link href={`/profile/${comment.user.id}`} className="shrink-0">
                     {comment.user.avatarUrl ? (
-                      <img src={comment.user.avatarUrl} alt="" className="w-8 h-8 rounded-full" />
+                      <img src={comment.user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-xs font-bold">
                         {(comment.user.fullName || "U").charAt(0).toUpperCase()}

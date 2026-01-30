@@ -183,7 +183,7 @@ export function InviteModal({ challengeId, challengeTitle, onClose }: InviteModa
                       <img
                         src={user.avatarUrl}
                         alt={user.username || user.fullName || "User"}
-                        className="w-10 h-10 rounded-full"
+                        className="w-10 h-10 rounded-full object-cover"
                       />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-400">

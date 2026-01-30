@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getYesterdayTopPerformers } from "@/actions/top-performer";
+import { getYesterdayTopPerformers, awardTopPerformers } from "@/actions/top-performer";
 import { TopPerformerModal } from "./top-performer-modal";
 
 // Small compact banner for feed
@@ -9,6 +9,9 @@ export async function TopPerformerBanner() {
   if (!result || result.performers.length === 0) {
     return null;
   }
+
+  // Award top performers if not already awarded today
+  await awardTopPerformers();
 
   const { performers, isTie, date } = result;
   const firstPerformer = performers[0];
@@ -39,7 +42,7 @@ export async function TopPerformerBanner() {
                     <img
                       src={performer.user.avatarUrl}
                       alt={performer.user.fullName || "User"}
-                      className="w-8 h-8 rounded-full ring-2 ring-slate-900"
+                      className="w-8 h-8 rounded-full ring-2 ring-slate-900 object-cover"
                     />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold ring-2 ring-slate-900">

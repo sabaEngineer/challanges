@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
-export type ReactionType = "fire" | "strong" | "kudos" | "not_bad";
+export type ReactionType = "fire" | "strong" | "kudos" | "not_bad" | "heart" | "smile";
 
 export async function toggleReaction(checkinId: string, type: ReactionType) {
   const user = await getCurrentUser();
@@ -78,6 +78,8 @@ export async function getPostReactions(checkinId: string) {
     strong: 0,
     kudos: 0,
     not_bad: 0,
+    heart: 0,
+    smile: 0,
   };
 
   reactions.forEach((r) => {
@@ -127,9 +129,9 @@ export async function getMultiplePostReactions(checkinIds: string[]) {
 
   checkinIds.forEach((id) => {
     result[id] = {
-      counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0 },
+      counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0, heart: 0, smile: 0 },
       userReacted: [],
-      reactors: { fire: [], strong: [], kudos: [], not_bad: [] },
+      reactors: { fire: [], strong: [], kudos: [], not_bad: [], heart: [], smile: [] },
     };
   });
 

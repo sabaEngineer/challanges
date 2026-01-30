@@ -218,7 +218,7 @@ export function ChallengeListItem({
                       <img
                         src={creator.avatarUrl}
                         alt=""
-                        className="w-4 h-4 rounded-full"
+                        className="w-4 h-4 rounded-full object-cover"
                       />
                     ) : null}
                     <span>{creator.username ? `@${creator.username}` : creator.fullName || "Anonymous"}</span>
@@ -342,7 +342,7 @@ export function ChallengeListItem({
                     <img
                       src={creator.avatarUrl}
                       alt=""
-                      className="w-4 h-4 rounded-full"
+                      className="w-4 h-4 rounded-full object-cover"
                     />
                   ) : (
                     <span>👤</span>

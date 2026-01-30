@@ -158,6 +158,73 @@ export async function getYesterdayTopPerformer(): Promise<TopPerformer | null> {
   return result.performers[0];
 }
 
+// Award top performer status and record it (called once per day)
+export async function awardTopPerformers(): Promise<boolean> {
+  const result = await getYesterdayTopPerformers();
+  if (!result || result.performers.length === 0) {
+    return false;
+  }
+
+  const yesterday = new Date();
+  yesterday.setHours(0, 0, 0, 0);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  // Check if awards have already been given for yesterday
+  const existingAwards = await db.topPerformerRecord.findFirst({
+    where: {
+      date: yesterday,
+    },
+  });
+
+  if (existingAwards) {
+    // Awards already given for this day
+    return false;
+  }
+
+  // Record the awards and increment user counts
+  for (const performer of result.performers) {
+    // Create record
+    await db.topPerformerRecord.create({
+      data: {
+        date: yesterday,
+        userId: performer.user.id,
+        checkinCount: performer.checkinCount,
+        challengeCount: performer.challenges.length,
+        score: performer.completedCount * 2 + performer.checkinCount,
+        isTie: result.isTie,
+      },
+    });
+
+    // Increment user's top performer count
+    await db.user.update({
+      where: { id: performer.user.id },
+      data: {
+        topPerformerCount: { increment: 1 },
+      },
+    });
+  }
+
+  return true;
+}
+
+// Get user's top performer count
+export async function getUserTopPerformerCount(userId: string): Promise<number> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { topPerformerCount: true },
+  });
+  return user?.topPerformerCount || 0;
+}
+
+// Get user's top performer history
+export async function getUserTopPerformerHistory(userId: string) {
+  return db.topPerformerRecord.findMany({
+    where: { userId },
+    orderBy: { date: "desc" },
+    take: 10,
+  });
+}
+
 // Get top performers for the last N days
 export async function getRecentTopPerformers(days: number = 7): Promise<TopPerformer[]> {
   const performers: TopPerformer[] = [];

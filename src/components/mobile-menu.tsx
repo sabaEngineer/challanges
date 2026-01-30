@@ -54,7 +54,7 @@ export function MobileMenu({ isLoggedIn, userAvatar, userName, userRole }: Mobil
                       <img
                         src={userAvatar}
                         alt={userName || "User"}
-                        className="w-10 h-10 rounded-full"
+                        className="w-10 h-10 rounded-full object-cover"
                       />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-lg font-medium">

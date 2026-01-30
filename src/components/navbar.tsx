@@ -74,7 +74,7 @@ export async function Navbar() {
                       <img
                         src={user.avatarUrl}
                         alt={user.fullName || user.username || "User"}
-                        className="w-8 h-8 rounded-full ring-2 ring-transparent hover:ring-amber-500/50 transition-all"
+                        className="w-8 h-8 rounded-full ring-2 ring-transparent hover:ring-amber-500/50 transition-all object-cover"
                       />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-medium">

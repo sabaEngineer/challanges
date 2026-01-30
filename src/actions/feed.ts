@@ -78,8 +78,8 @@ export async function getNewChallengesForFeed(limit: number = 10) {
 
   return challenges.map((challenge) => {
     // Build reaction data
-    const reactionCounts: Record<string, number> = { fire: 0, strong: 0, kudos: 0, not_bad: 0 };
-    const reactors: Record<string, ReactionUser[]> = { fire: [], strong: [], kudos: [], not_bad: [] };
+    const reactionCounts: Record<string, number> = { fire: 0, strong: 0, kudos: 0, not_bad: 0, heart: 0, smile: 0 };
+    const reactors: Record<string, ReactionUser[]> = { fire: [], strong: [], kudos: [], not_bad: [], heart: [], smile: [] };
     const userReacted: string[] = [];
 
     challenge.reactions.forEach((r) => {
@@ -221,9 +221,9 @@ export async function getFeedPosts(limit: number = 20, offset: number = 0) {
     })),
     isOwnPost: user?.id === checkin.userId,
     reactions: reactionsMap[checkin.id] || {
-      counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0 } as Record<ReactionType, number>,
+      counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0, heart: 0, smile: 0 } as Record<ReactionType, number>,
       userReacted: [] as ReactionType[],
-      reactors: { fire: [], strong: [], kudos: [], not_bad: [] } as Record<ReactionType, ReactionUser[]>,
+      reactors: { fire: [], strong: [], kudos: [], not_bad: [], heart: [], smile: [] } as Record<ReactionType, ReactionUser[]>,
     },
     commentCount: commentCounts[checkin.id] || 0,
   }));
@@ -382,9 +382,9 @@ export async function getGroupedFeedPosts(limit: number = 20, offset: number = 0
         },
       })),
       reactions: reactionsMap[checkin.id] || {
-        counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0 } as Record<ReactionType, number>,
+        counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0, heart: 0, smile: 0 } as Record<ReactionType, number>,
         userReacted: [] as ReactionType[],
-        reactors: { fire: [], strong: [], kudos: [], not_bad: [] } as Record<ReactionType, ReactionUser[]>,
+        reactors: { fire: [], strong: [], kudos: [], not_bad: [], heart: [], smile: [] } as Record<ReactionType, ReactionUser[]>,
       },
       commentCount: commentCounts[checkin.id] || 0,
     })),
@@ -555,9 +555,9 @@ export async function getSinglePost(postId: string) {
   ]);
 
   const reactions = reactionsData[checkin.id] || {
-    counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0 } as Record<ReactionType, number>,
+    counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0, heart: 0, smile: 0 } as Record<ReactionType, number>,
     userReacted: [] as ReactionType[],
-    reactors: { fire: [], strong: [], kudos: [], not_bad: [] } as Record<ReactionType, ReactionUser[]>,
+    reactors: { fire: [], strong: [], kudos: [], not_bad: [], heart: [], smile: [] } as Record<ReactionType, ReactionUser[]>,
   };
 
   return {

@@ -139,7 +139,7 @@ export function UserProgressModal({
                 <img
                   src={data.user.avatarUrl}
                   alt={userName}
-                  className="w-12 h-12 rounded-full"
+                  className="w-12 h-12 rounded-full object-cover"
                 />
               ) : (
                 <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center text-xl">

@@ -71,7 +71,9 @@ interface FeedPostProps {
 
 const REACTIONS: { type: ReactionType; emoji: string; label: string; activeColor: string }[] = [
   { type: "fire", emoji: "🔥", label: "Fire", activeColor: "text-amber-400" },
+  { type: "heart", emoji: "❤️", label: "Love", activeColor: "text-red-400" },
   { type: "strong", emoji: "💪", label: "Strong", activeColor: "text-emerald-400" },
+  { type: "smile", emoji: "😊", label: "Nice", activeColor: "text-yellow-400" },
   { type: "kudos", emoji: "👏", label: "Kudos", activeColor: "text-blue-400" },
   { type: "not_bad", emoji: "👍", label: "Not Bad", activeColor: "text-violet-400" },
 ];
@@ -353,7 +355,7 @@ export function FeedPost({
             <img
               src={user.avatarUrl}
               alt={user.fullName || "User"}
-              className="w-12 h-12 rounded-full ring-2 ring-slate-700"
+              className="w-12 h-12 rounded-full ring-2 ring-slate-700 object-cover"
             />
           ) : (
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-lg font-bold">
@@ -431,6 +433,11 @@ export function FeedPost({
             const progress = item.requirement.targetValue && item.value
               ? Math.min((item.value / item.requirement.targetValue) * 100, 100)
               : item.isDone ? 100 : 0;
+            const isOverAchieved = item.requirement.type !== "yes_no" && 
+              item.value !== null && 
+              item.requirement.targetValue !== null && 
+              item.value > item.requirement.targetValue;
+            const overAmount = isOverAchieved ? item.value! - item.requirement.targetValue! : 0;
 
             return (
               <div key={item.id} className="flex items-center gap-3">
@@ -449,8 +456,13 @@ export function FeedPost({
                       {item.requirement.title || item.requirement.type}
                     </span>
                     {item.requirement.type !== "yes_no" && item.value !== null && (
-                      <span className="text-slate-400">
+                      <span className="flex items-center gap-1 text-slate-400">
                         {item.value}{item.requirement.targetValue ? `/${item.requirement.targetValue}` : ""} {formatUnit(item.requirement.unit)}
+                        {isOverAchieved && (
+                          <span className="text-xs px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full font-medium">
+                            +{overAmount}
+                          </span>
+                        )}
                       </span>
                     )}
                   </div>
@@ -578,7 +590,7 @@ export function FeedPost({
                             <img
                               src={reactor.avatarUrl}
                               alt=""
-                              className="w-8 h-8 rounded-full"
+                              className="w-8 h-8 rounded-full object-cover"
                             />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold">
@@ -670,7 +682,7 @@ export function FeedPost({
                               <img
                                 src={reactor.avatarUrl}
                                 alt=""
-                                className="w-5 h-5 rounded-full"
+                                className="w-5 h-5 rounded-full object-cover"
                               />
                             ) : (
                               <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-[8px] font-bold">
@@ -708,7 +720,7 @@ export function FeedPost({
 
       {/* Comments Section */}
       {showComments && (
-        <div className="border-t border-slate-700/50">
+        <div>
           {/* Comments List */}
           <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
             {loadingComments ? (
@@ -717,7 +729,7 @@ export function FeedPost({
               </div>
             ) : comments.length === 0 ? (
               <div className="text-center py-4 text-slate-500 text-sm">
-                No comments yet. Be the first to comment!
+                No comments yet. Be the first!
               </div>
             ) : (
               comments.map((comment) => (
@@ -727,7 +739,7 @@ export function FeedPost({
                       <img
                         src={comment.user.avatarUrl}
                         alt={comment.user.fullName || "User"}
-                        className="w-8 h-8 rounded-full"
+                        className="w-8 h-8 rounded-full object-cover"
                       />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-xs font-bold">

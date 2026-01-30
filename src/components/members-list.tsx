@@ -113,7 +113,7 @@ export function MembersList({
                 <img
                   src={member.user.avatarUrl}
                   alt={member.user.username || member.user.fullName || "User"}
-                  className="w-10 h-10 rounded-full"
+                  className="w-10 h-10 rounded-full object-cover"
                 />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-400">

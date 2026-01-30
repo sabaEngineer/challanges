@@ -15,15 +15,16 @@ enum UserRole {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  fullName  String?  @map("full_name")
-  avatarUrl String?  @map("avatar_url") @db.Text
-  googleId  String?  @map("google_id") @db.VarChar(255)
-  username  String?  @unique
-  role      UserRole @default(user)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  id                String   @id @default(uuid())
+  email             String   @unique
+  fullName          String?  @map("full_name")
+  avatarUrl         String?  @map("avatar_url") @db.Text
+  googleId          String?  @map("google_id") @db.VarChar(255)
+  username          String?  @unique
+  role              UserRole @default(user)
+  topPerformerCount Int      @default(0) @map("top_performer_count")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
 
   challenges            Challenge[]            @relation("ChallengeCreator")
   challengeMembers      ChallengeMember[]
@@ -39,6 +40,7 @@ model User {
   challengeComments     ChallengeComment[]
   challengeCommentLikes ChallengeCommentLike[]
   feedback              Feedback[]
+  topPerformerAwards    TopPerformerRecord[]
 
   @@map("users")
 }
@@ -107,6 +109,8 @@ enum ReactionType {
   strong
   kudos
   not_bad
+  heart
+  smile
 
   @@map("reaction_type")
 }
@@ -400,4 +404,20 @@ model Feedback {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("feedback")
+}
+
+model TopPerformerRecord {
+  id            String   @id @default(uuid())
+  date          DateTime @db.Date
+  userId        String   @map("user_id")
+  checkinCount  Int      @map("checkin_count")
+  challengeCount Int     @map("challenge_count")
+  score         Int
+  isTie         Boolean  @default(false) @map("is_tie")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([date, userId])
+  @@map("top_performer_records")
 }

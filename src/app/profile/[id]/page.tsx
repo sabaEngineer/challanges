@@ -11,6 +11,7 @@ import { BackButton } from "@/components/back-button";
 import { ActivityCalendar } from "@/components/activity-calendar";
 import { getUserPoints, getUserRank } from "@/actions/leaderboard";
 import { getRankTitle, formatPoints, POINTS_LABEL } from "@/lib/points";
+import { getUserTopPerformerCount } from "@/actions/top-performer";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -89,13 +90,14 @@ async function getUserProfile(userId: string) {
 
 export default async function UserProfilePage({ params }: PageProps) {
   const { id } = await params;
-  const [currentUser, profile, points, rank, activityHistory, books] = await Promise.all([
+  const [currentUser, profile, points, rank, activityHistory, books, topPerformerCount] = await Promise.all([
     getCurrentUser(),
     getUserProfile(id),
     getUserPoints(id),
     getUserRank(id),
     getUserActivityHistory(id),
     getUserBooksForProfile(id),
+    getUserTopPerformerCount(id),
   ]);
 
   if (!profile) {
@@ -183,7 +185,7 @@ export default async function UserProfilePage({ params }: PageProps) {
         </Card>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           <Card className="text-center py-4">
             <div className="text-2xl font-bold text-amber-400">{stats.challengesCreated}</div>
             <div className="text-xs text-slate-400">Created</div>
@@ -203,6 +205,15 @@ export default async function UserProfilePage({ params }: PageProps) {
           <Card className="text-center py-4">
             <div className="text-2xl font-bold text-violet-400">{stats.bestStreak}</div>
             <div className="text-xs text-slate-400">Best Streak</div>
+          </Card>
+          <Card className="text-center py-4 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-orange-500/10" />
+            <div className="relative">
+              <div className="text-2xl font-bold text-amber-400 flex items-center justify-center gap-1">
+                🏆 {topPerformerCount}
+              </div>
+              <div className="text-xs text-slate-400">Top Performer</div>
+            </div>
           </Card>
         </div>
 

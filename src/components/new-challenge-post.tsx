@@ -65,7 +65,9 @@ interface NewChallengePostProps {
 
 const REACTIONS: { type: ReactionType; emoji: string; label: string; activeColor: string }[] = [
   { type: "fire", emoji: "🔥", label: "Fire", activeColor: "text-amber-400" },
+  { type: "heart", emoji: "❤️", label: "Love", activeColor: "text-red-400" },
   { type: "strong", emoji: "💪", label: "Strong", activeColor: "text-emerald-400" },
+  { type: "smile", emoji: "😊", label: "Nice", activeColor: "text-yellow-400" },
   { type: "kudos", emoji: "👏", label: "Kudos", activeColor: "text-blue-400" },
   { type: "not_bad", emoji: "👍", label: "Not Bad", activeColor: "text-violet-400" },
 ];
@@ -529,7 +531,7 @@ export function NewChallengePost({
                           className="flex items-center gap-3 px-4 py-3 hover:bg-slate-800/30 transition-colors"
                         >
                           {reactor.avatarUrl ? (
-                            <img src={reactor.avatarUrl} alt="" className="w-8 h-8 rounded-full" />
+                            <img src={reactor.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold">
                               {(reactor.fullName || "U").charAt(0).toUpperCase()}
@@ -616,7 +618,7 @@ export function NewChallengePost({
                             className="flex items-center gap-2 hover:bg-slate-700/50 rounded px-1 py-0.5 -mx-1"
                           >
                             {reactor.avatarUrl ? (
-                              <img src={reactor.avatarUrl} alt="" className="w-5 h-5 rounded-full" />
+                              <img src={reactor.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
                             ) : (
                               <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-[8px] font-bold">
                                 {(reactor.fullName || "U").charAt(0).toUpperCase()}
@@ -670,7 +672,7 @@ export function NewChallengePost({
                       <img
                         src={comment.user.avatarUrl}
                         alt={comment.user.fullName || "User"}
-                        className="w-8 h-8 rounded-full"
+                        className="w-8 h-8 rounded-full object-cover"
                       />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-xs font-bold">
