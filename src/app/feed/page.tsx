@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getGroupedFeedPosts, getNewChallengesForFeed } from "@/actions/feed";
 import { SwipeableFeedPost } from "@/components/swipeable-feed-post";
 import { NewChallengePost } from "@/components/new-challenge-post";
+import { TopPerformerBanner } from "@/components/top-performer-banner";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 
@@ -45,7 +46,7 @@ export default async function FeedPage() {
     <div className="min-h-screen px-4 py-8">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
             Activity Feed
           </h1>
@@ -53,6 +54,9 @@ export default async function FeedPage() {
             See what everyone's been up to
           </p>
         </div>
+
+        {/* Top Performer Banner */}
+        <TopPerformerBanner />
 
         {/* Feed */}
         {!hasContent ? (

@@ -8,6 +8,7 @@ import { getUserActivityHistory } from "@/actions/profile";
 import { ChallengeCard } from "@/components/challenge-card";
 import { TodaysChallenges } from "@/components/todays-challenges";
 import { ActivityCalendar } from "@/components/activity-calendar";
+import { TopPerformerBanner } from "@/components/top-performer-banner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { InvitationCard } from "@/components/invitation-card";
@@ -75,12 +76,15 @@ export default async function DashboardPage() {
     <div className="min-h-screen px-4 py-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">
             Welcome back, <span className="text-amber-400">{user.username ? `@${user.username}` : user.fullName || "there"}</span>
           </h1>
           <p className="text-slate-400">Manage your challenges and track progress</p>
         </div>
+
+        {/* Top Performer Banner */}
+        <TopPerformerBanner />
 
         {/* Pending Invitations */}
         {invitations.length > 0 && (
