@@ -49,12 +49,10 @@ export async function TopPerformerBanner() {
 
             {/* Text */}
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-slate-300">
-                <span className="text-amber-400 font-medium">Yesterday's Top Performer</span>
-                <span className="mx-1.5 text-slate-600">•</span>
-                <span className="text-white font-semibold group-hover:text-amber-400 transition-colors">
-                  {user.fullName || user.username || "Anonymous"}
-                </span>
+              <p className="text-xs text-amber-400 font-medium">Yesterday's Top Performer</p>
+              <p className="text-sm text-white font-semibold group-hover:text-amber-400 transition-colors truncate">
+                {user.fullName || user.username || "Anonymous"}
+                <span className="ml-2 text-xs font-normal text-emerald-400">✓ {completedCount} check-ins</span>
               </p>
             </div>
 
