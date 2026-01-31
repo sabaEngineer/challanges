@@ -28,60 +28,48 @@ export async function TopPerformerBanner() {
       {/* Compact Banner */}
       <div className="mb-6">
         <div className="relative overflow-hidden bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-500/20 rounded-xl p-3">
-          <div className="flex items-center gap-3">
+          {/* Header row with trophy and title */}
+          <div className="flex items-center gap-3 mb-2 sm:mb-0">
             {/* Trophy */}
             <div className="shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-xl shadow-lg shadow-amber-500/20">
               🏆
             </div>
 
-            {/* User Avatars */}
-            <div className="flex -space-x-2">
-              {performers.slice(0, 3).map((performer) => (
-                <Link key={performer.user.id} href={`/profile/${performer.user.id}`} className="hover:z-10 transition-transform hover:scale-110">
-                  {performer.user.avatarUrl ? (
-                    <img
-                      src={performer.user.avatarUrl}
-                      alt={performer.user.fullName || "User"}
-                      className="w-8 h-8 rounded-full ring-2 ring-slate-900 object-cover"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold ring-2 ring-slate-900">
-                      {(performer.user.fullName || "U").charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </Link>
-              ))}
-            </div>
-
-            {/* Text */}
+            {/* Title and single performer (desktop) or just title (mobile with tie) */}
             <div className="flex-1 min-w-0">
               <p className="text-xs text-amber-400 font-medium">
                 Yesterday's Top Performer{isTie ? "s" : ""}
                 {isTie && <span className="ml-1 text-slate-500">(Tie!)</span>}
               </p>
-              <p className="text-sm text-white font-semibold truncate">
-                {isTie ? (
-                  <>
-                    {performers.slice(0, 2).map((p, i) => (
-                      <span key={p.user.id}>
-                        <Link href={`/profile/${p.user.id}`} className="hover:text-amber-400 transition-colors">
-                          {p.user.fullName || p.user.username || "Anonymous"}
-                        </Link>
-                        {i < Math.min(performers.length, 2) - 1 && <span className="text-slate-500"> & </span>}
-                      </span>
-                    ))}
-                    {performers.length > 2 && <span className="text-slate-500"> +{performers.length - 2}</span>}
-                  </>
-                ) : (
+              
+              {/* Single performer - show inline on all screens */}
+              {!isTie && (
+                <p className="text-sm text-white font-semibold truncate">
                   <Link href={`/profile/${firstPerformer.user.id}`} className="hover:text-amber-400 transition-colors">
                     {firstPerformer.user.fullName || firstPerformer.user.username || "Anonymous"}
                   </Link>
-                )}
-                <span className="ml-2 text-xs font-normal text-emerald-400">✓ {firstPerformer.completedCount} check-ins</span>
-              </p>
+                  <span className="ml-2 text-xs font-normal text-emerald-400">✓ {firstPerformer.completedCount} check-ins</span>
+                </p>
+              )}
+
+              {/* Multiple performers - inline only on desktop */}
+              {isTie && (
+                <p className="hidden sm:block text-sm text-white font-semibold truncate">
+                  {performers.slice(0, 2).map((p, i) => (
+                    <span key={p.user.id}>
+                      <Link href={`/profile/${p.user.id}`} className="hover:text-amber-400 transition-colors">
+                        {p.user.fullName || p.user.username || "Anonymous"}
+                      </Link>
+                      {i < Math.min(performers.length, 2) - 1 && <span className="text-slate-500"> & </span>}
+                    </span>
+                  ))}
+                  {performers.length > 2 && <span className="text-slate-500"> +{performers.length - 2}</span>}
+                  <span className="ml-2 text-xs font-normal text-emerald-400">✓ {firstPerformer.completedCount} check-ins each</span>
+                </p>
+              )}
             </div>
 
-            {/* Stats badges */}
+            {/* Stats badges - desktop only */}
             <div className="hidden sm:flex items-center gap-2 shrink-0">
               <span className="flex items-center gap-1 text-xs px-2 py-1 bg-emerald-500/20 rounded-full text-emerald-400">
                 ✓ {firstPerformer.completedCount}
@@ -91,6 +79,45 @@ export async function TopPerformerBanner() {
               </span>
             </div>
           </div>
+
+          {/* Multiple performers list - mobile only, stacked vertically */}
+          {isTie && (
+            <div className="sm:hidden mt-2 space-y-2 border-t border-amber-500/20 pt-2">
+              {performers.slice(0, 5).map((performer) => (
+                <Link 
+                  key={performer.user.id} 
+                  href={`/profile/${performer.user.id}`}
+                  className="flex items-center gap-3 p-2 rounded-lg bg-slate-800/30 hover:bg-slate-800/50 transition-colors"
+                >
+                  {performer.user.avatarUrl ? (
+                    <img
+                      src={performer.user.avatarUrl}
+                      alt={performer.user.fullName || "User"}
+                      className="w-9 h-9 rounded-full ring-2 ring-amber-500/30 object-cover"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold ring-2 ring-amber-500/30">
+                      {(performer.user.fullName || "U").charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white font-medium truncate">
+                      {performer.user.fullName || performer.user.username || "Anonymous"}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {performer.challenges.length} challenge{performer.challenges.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs px-2 py-1 bg-emerald-500/20 rounded-full text-emerald-400">
+                    ✓ {performer.completedCount}
+                  </div>
+                </Link>
+              ))}
+              {performers.length > 5 && (
+                <p className="text-xs text-center text-slate-500 pt-1">+{performers.length - 5} more top performers</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>
