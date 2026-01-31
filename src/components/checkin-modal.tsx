@@ -124,16 +124,18 @@ export function CheckinModal({
         return { ...prev, [reqId]: { ...current, isDone: newIsDone } };
       }
       
-      // For numeric types, isDone is ONLY determined by the value meeting the target
-      // Checkbox click doesn't change isDone directly - user must enter a value
-      // This prevents accidental completion without entering data
       const targetValue = req.targetValue ? Number(req.targetValue) : null;
       const currentValue = parseFloat(current.value) || 0;
       
       if (targetValue !== null && targetValue > 0) {
-        // isDone is automatically set based on value vs target
-        // Clicking checkbox has no effect for numeric types with targets
-        return prev;
+        // For numeric types with targets:
+        // - If marking as done, auto-fill the target value
+        // - If unmarking, keep the value but mark as not done
+        if (newIsDone) {
+          return { ...prev, [reqId]: { value: targetValue.toString(), isDone: true } };
+        } else {
+          return { ...prev, [reqId]: { ...current, isDone: false } };
+        }
       }
       
       // For requirements without a target, allow manual toggle only if value > 0
