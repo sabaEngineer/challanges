@@ -551,8 +551,8 @@ export function NewChallengePost({
       )}
 
       {/* Post Footer - Reactions & Comment Button */}
-      <div className="px-4 py-3 border-t border-slate-700/50 flex items-center justify-between">
-        <div className="flex items-center gap-1">
+      <div className="px-0 sm:px-4 py-2 sm:py-3 border-t border-slate-700/50 flex items-center justify-between">
+        <div className="flex items-center gap-0.5 sm:gap-1">
           {REACTIONS.map((reaction) => {
             const isReacted = reactions.userReacted.includes(reaction.type);
             const count = reactions.counts[reaction.type];
@@ -564,7 +564,7 @@ export function NewChallengePost({
                 <button
                   onClick={() => handleReaction(reaction.type)}
                   disabled={isPending}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all text-sm ${
+                  className={`flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-full transition-all text-sm ${
                     isReacted
                       ? `bg-slate-700/50 ${reaction.activeColor}`
                       : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-300"
@@ -644,7 +644,7 @@ export function NewChallengePost({
         </div>
         <button
           onClick={handleCommentClick}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-slate-400 hover:bg-slate-800/50 hover:text-slate-300 transition-all text-sm"
+          className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-slate-400 hover:bg-slate-800/50 hover:text-slate-300 transition-all text-sm"
         >
           <span>💬</span>
           <span>Comment</span>
@@ -653,7 +653,7 @@ export function NewChallengePost({
 
       {/* Comments Section */}
       {showComments && (
-        <div className="border-t border-slate-700/50">
+        <div>
           <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
             {loadingComments ? (
               <div className="text-center py-4 text-slate-400 text-sm">
@@ -661,7 +661,7 @@ export function NewChallengePost({
               </div>
             ) : comments.length === 0 ? (
               <div className="text-center py-4 text-slate-500 text-sm">
-                No comments yet. Be the first to comment!
+                No comments yet. Be the first!
               </div>
             ) : (
               comments.map((comment) => (
