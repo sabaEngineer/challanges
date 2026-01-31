@@ -517,7 +517,7 @@ export function SwipeableFeedPost({
           {currentCheckin.imageUrl && (
             <div className="rounded-lg overflow-hidden mb-4 bg-slate-800">
               {isVideo(currentCheckin.imageUrl) ? (
-                <video src={currentCheckin.imageUrl} controls preload="metadata" className="w-full h-auto" />
+                <video src={`${currentCheckin.imageUrl}#t=0.1`} controls preload="metadata" className="w-full h-auto" />
               ) : (
                 <img src={currentCheckin.imageUrl} alt="Check-in" className="w-full h-auto" />
               )}

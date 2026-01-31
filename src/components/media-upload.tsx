@@ -176,8 +176,9 @@ export function MediaUpload({
         <div className="relative group">
           {isVideo ? (
             <video
-              src={value}
+              src={`${value}#t=0.1`}
               controls
+              preload="metadata"
               className="w-full max-h-64 object-contain rounded-lg border border-slate-700 bg-black"
             />
           ) : (
@@ -352,7 +353,8 @@ export function MediaUploadCompact({
         <div className="flex items-center gap-3">
           {isVideo ? (
             <video
-              src={value}
+              src={`${value}#t=0.1`}
+              preload="metadata"
               className="w-16 h-16 object-cover rounded-lg border border-slate-700 bg-black"
             />
           ) : (
@@ -421,7 +423,7 @@ export function MediaDisplay({
   if (isVideo) {
     return (
       <video
-        src={url}
+        src={`${url}#t=0.1`}
         controls
         className={`w-full h-auto bg-black ${className}`}
         preload="metadata"

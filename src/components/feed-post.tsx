@@ -496,7 +496,7 @@ export function FeedPost({
              imageUrl.toLowerCase().includes(".webm") || 
              imageUrl.toLowerCase().includes(".mov") ? (
               <video
-                src={imageUrl}
+                src={`${imageUrl}#t=0.1`}
                 controls
                 preload="metadata"
                 className="w-full h-auto"
