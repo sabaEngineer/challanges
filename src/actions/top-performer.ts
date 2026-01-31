@@ -25,22 +25,23 @@ export interface TopPerformersResult {
 }
 
 export async function getYesterdayTopPerformers(): Promise<TopPerformersResult | null> {
-  // Get yesterday's date range
+  // Get yesterday's date (midnight to midnight based on checkinDate)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
   
-  const endOfYesterday = new Date(yesterday);
-  endOfYesterday.setHours(23, 59, 59, 999);
+  // checkinDate is stored as a Date without time, so we match exactly on that date
+  const yesterdayStart = new Date(Date.UTC(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate()));
+  const yesterdayEnd = new Date(Date.UTC(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999));
 
-  // Get all check-ins from yesterday grouped by user
+  // Get all check-ins for yesterday based on checkinDate (the actual day of the check-in)
   const checkins = await db.dailyCheckin.findMany({
     where: {
-      createdAt: {
-        gte: yesterday,
-        lte: endOfYesterday,
+      checkinDate: {
+        gte: yesterdayStart,
+        lte: yesterdayEnd,
       },
     },
     include: {
@@ -234,14 +235,15 @@ export async function getRecentTopPerformers(days: number = 7): Promise<TopPerfo
     date.setHours(0, 0, 0, 0);
     date.setDate(date.getDate() - i);
     
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Use UTC dates for checkinDate comparison
+    const dayStart = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayEnd = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999));
 
     const checkins = await db.dailyCheckin.findMany({
       where: {
-        createdAt: {
-          gte: date,
-          lte: endOfDay,
+        checkinDate: {
+          gte: dayStart,
+          lte: dayEnd,
         },
       },
       include: {
