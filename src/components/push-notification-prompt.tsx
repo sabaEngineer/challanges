@@ -46,6 +46,13 @@ export function PushNotificationPrompt() {
       console.log("[Push] isIOSDevice:", isIOSDevice());
       console.log("[Push] isRunningAsPWA:", isRunningAsPWA());
       
+      // If user already has a token, don't show the modal
+      if (status.hasToken) {
+        console.log("[Push] User already has token - skipping");
+        setIsEnabled(true);
+        return;
+      }
+      
       // Check if iOS device (needs PWA for push notifications)
       if (isIOSDevice()) {
         console.log("[Push] iOS detected - showing PWA instructions");
