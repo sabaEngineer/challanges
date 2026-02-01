@@ -87,6 +87,7 @@ export default async function FeedPage() {
                     checkinDate={post.checkinDate}
                     note={post.note}
                     imageUrl={post.imageUrl}
+                    mediaUrls={post.mediaUrls}
                     createdAt={post.createdAt}
                     items={post.items}
                     isOwnPost={post.isOwnPost}

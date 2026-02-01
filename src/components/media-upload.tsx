@@ -439,3 +439,183 @@ export function MediaDisplay({
     />
   );
 }
+
+// Multi-file upload component
+export interface MediaItem {
+  url: string;
+  type: "image" | "video";
+}
+
+interface MultiMediaUploadProps {
+  value: MediaItem[];
+  onChange: (items: MediaItem[]) => void;
+  prefix?: string;
+  maxFiles?: number;
+  maxImageSize?: number;
+  maxVideoSize?: number;
+}
+
+export function MultiMediaUpload({
+  value = [],
+  onChange,
+  prefix = "uploads",
+  maxFiles = 10,
+  maxImageSize = 5,
+  maxVideoSize = 50,
+}: MultiMediaUploadProps) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFiles = async (files: FileList) => {
+    if (!files.length) return;
+
+    const remainingSlots = maxFiles - value.length;
+    if (remainingSlots <= 0) {
+      setError(`Maximum ${maxFiles} files allowed`);
+      return;
+    }
+
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
+    setError(null);
+    setUploading(true);
+
+    const newItems: MediaItem[] = [];
+
+    for (let i = 0; i < filesToUpload.length; i++) {
+      const file = filesToUpload[i];
+      setUploadProgress(Math.round((i / filesToUpload.length) * 100));
+
+      const mediaType = getMediaType(file.type, file.name);
+      if (!mediaType) {
+        console.error(`Skipping unsupported file: ${file.name}`);
+        continue;
+      }
+
+      const maxSize = mediaType === "video" ? maxVideoSize : maxImageSize;
+      if (file.size > maxSize * 1024 * 1024) {
+        console.error(`Skipping ${file.name}: exceeds ${maxSize}MB`);
+        continue;
+      }
+
+      try {
+        const uploadPrefix = mediaType === "video" ? `${prefix}/videos` : prefix;
+        const result = await getUploadUrl(file.type, uploadPrefix);
+
+        if (result.error || !result.presignedUrl) {
+          console.error(`Failed to get upload URL for ${file.name}`);
+          continue;
+        }
+
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) resolve();
+            else reject(new Error("Upload failed"));
+          };
+          xhr.onerror = () => reject(new Error("Upload failed"));
+          xhr.open("PUT", result.presignedUrl!);
+          xhr.setRequestHeader("Content-Type", file.type);
+          xhr.send(file);
+        });
+
+        newItems.push({ url: result.objectUrl!, type: mediaType });
+      } catch (err) {
+        console.error(`Error uploading ${file.name}:`, err);
+      }
+    }
+
+    if (newItems.length > 0) {
+      onChange([...value, ...newItems]);
+    }
+
+    setUploading(false);
+    setUploadProgress(0);
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) handleFiles(e.target.files);
+  };
+
+  const removeItem = (index: number) => {
+    const newItems = [...value];
+    newItems.splice(index, 1);
+    onChange(newItems);
+  };
+
+  return (
+    <div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*,video/*"
+        multiple
+        onChange={handleInputChange}
+        className="hidden"
+      />
+
+      {/* Preview grid */}
+      {value.length > 0 && (
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {value.map((item, index) => (
+            <div key={index} className="relative group aspect-square">
+              {item.type === "video" ? (
+                <video
+                  src={`${item.url}#t=0.1`}
+                  preload="metadata"
+                  className="w-full h-full object-cover rounded-lg border border-slate-700 bg-black"
+                />
+              ) : (
+                <img
+                  src={item.url}
+                  alt={`Upload ${index + 1}`}
+                  className="w-full h-full object-cover rounded-lg border border-slate-700"
+                />
+              )}
+              {/* Video badge */}
+              {item.type === "video" && (
+                <div className="absolute top-1 left-1 bg-black/70 rounded px-1.5 py-0.5 text-xs text-white">
+                  Video
+                </div>
+              )}
+              {/* Remove button */}
+              <button
+                type="button"
+                onClick={() => removeItem(index)}
+                className="absolute top-1 right-1 w-6 h-6 bg-red-500/80 hover:bg-red-500 rounded-full flex items-center justify-center text-white text-sm opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add button */}
+      {value.length < maxFiles && (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 transition-colors disabled:opacity-50"
+        >
+          {uploading ? (
+            <>
+              <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+              <span>Uploading... {uploadProgress}%</span>
+            </>
+          ) : (
+            <>
+              <span>📷</span>
+              <span>Add Photos/Videos ({value.length}/{maxFiles})</span>
+            </>
+          )}
+        </button>
+      )}
+
+      {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
+    </div>
+  );
+}

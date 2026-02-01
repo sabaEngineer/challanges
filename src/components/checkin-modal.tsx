@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createOrUpdateCheckin } from "@/actions/checkins";
 import { Button } from "./ui/button";
-import { MediaUploadCompact } from "./media-upload";
+import { MultiMediaUpload, MediaItem } from "./media-upload";
 import {
   ChallengeType,
   ChallengeUnit,
@@ -29,6 +29,7 @@ interface CheckinItem {
 interface ExistingCheckin {
   note?: string | null;
   imageUrl?: string | null;
+  mediaUrls?: MediaItem[] | null;
   items: CheckinItem[];
 }
 
@@ -57,7 +58,20 @@ export function CheckinModal({
   const [isPending, startTransition] = useTransition();
   const [savedState, setSavedState] = useState<"none" | "partial" | "complete">("none");
   const [note, setNote] = useState(existingCheckin?.note || "");
-  const [imageUrl, setImageUrl] = useState(existingCheckin?.imageUrl || "");
+  const [mediaUrls, setMediaUrls] = useState<MediaItem[]>(() => {
+    // Support both old imageUrl and new mediaUrls
+    if (existingCheckin?.mediaUrls && Array.isArray(existingCheckin.mediaUrls)) {
+      return existingCheckin.mediaUrls;
+    }
+    if (existingCheckin?.imageUrl) {
+      const isVideo = existingCheckin.imageUrl.includes("/videos/") || 
+                      existingCheckin.imageUrl.includes(".mp4") ||
+                      existingCheckin.imageUrl.includes(".mov") ||
+                      existingCheckin.imageUrl.includes(".webm");
+      return [{ url: existingCheckin.imageUrl, type: isVideo ? "video" : "image" }];
+    }
+    return [];
+  });
   const [shareToFeed, setShareToFeed] = useState(false);
   const [items, setItems] = useState<Record<string, { value: string; isDone: boolean }>>(() => {
     const initial: Record<string, { value: string; isDone: boolean }> = {};
@@ -194,7 +208,7 @@ export function CheckinModal({
         today,
         checkinItems,
         note || undefined,
-        imageUrl || undefined,
+        mediaUrls.length > 0 ? mediaUrls : undefined,
         shouldShareToFeed
       );
 
@@ -514,12 +528,13 @@ export function CheckinModal({
           {/* Media Upload */}
           <div>
             <label className="block text-sm font-medium text-slate-400 mb-2">
-              Add Photo/Video (optional)
+              Add Photos/Videos (optional)
             </label>
-            <MediaUploadCompact
-              value={imageUrl || undefined}
-              onChange={(url) => setImageUrl(url || "")}
+            <MultiMediaUpload
+              value={mediaUrls}
+              onChange={setMediaUrls}
               prefix="checkins"
+              maxFiles={10}
               maxVideoSize={100}
             />
           </div>

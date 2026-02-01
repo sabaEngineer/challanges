@@ -59,12 +59,17 @@ interface CheckinItemInput {
   isDone: boolean;
 }
 
+interface MediaItem {
+  url: string;
+  type: "image" | "video";
+}
+
 export async function createOrUpdateCheckin(
   challengeId: string,
   date: string,
   items: CheckinItemInput[],
   note?: string,
-  imageUrl?: string,
+  mediaUrls?: MediaItem[],
   sharedToFeed?: boolean
 ): Promise<ActionResult> {
   console.log("createOrUpdateCheckin called with:", { challengeId, date, itemsCount: items.length });
@@ -198,6 +203,9 @@ export async function createOrUpdateCheckin(
     console.log("Creating/updating checkin for date:", checkinDate, "allDone:", allDone);
     
     // Create or update the daily checkin
+    // Store mediaUrls array, and keep first image as imageUrl for backward compatibility
+    const firstImageUrl = mediaUrls?.length ? mediaUrls[0].url : null;
+    
     const checkin = await db.dailyCheckin.upsert({
       where: {
         challengeId_userId_checkinDate: {
@@ -211,13 +219,15 @@ export async function createOrUpdateCheckin(
         userId: user.id,
         checkinDate,
         note: note || null,
-        imageUrl: imageUrl || null,
+        imageUrl: firstImageUrl,
+        mediaUrls: mediaUrls || null,
         isDone: allDone,
         sharedToFeed: sharedToFeed ?? false,
       },
       update: {
         note: note || null,
-        imageUrl: imageUrl || null,
+        imageUrl: firstImageUrl,
+        mediaUrls: mediaUrls || null,
         isDone: allDone,
         ...(sharedToFeed !== undefined && { sharedToFeed }),
       },

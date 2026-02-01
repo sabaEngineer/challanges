@@ -4,6 +4,15 @@ import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { requestNotificationPermission, initializeFirebase, onForegroundMessage } from "@/lib/firebase";
 import { savePushToken, getPushNotificationStatus } from "@/actions/push-notifications";
+import { trackNotificationAction } from "@/actions/analytics";
+
+function getDeviceType(): "ios" | "android" | "desktop" {
+  if (typeof window === "undefined") return "desktop";
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua)) return "ios";
+  if (/Android/.test(ua)) return "android";
+  return "desktop";
+}
 
 // Check if running in PWA mode (added to home screen)
 function isRunningAsPWA(): boolean {
@@ -66,6 +75,14 @@ export function PushNotificationPrompt() {
         return;
       }
       
+      // Check if already shown today (once per day)
+      const lastShown = localStorage.getItem("push-notification-last-shown");
+      const today = new Date().toDateString();
+      if (lastShown === today) {
+        console.log("[Push] Already shown today - skipping");
+        return;
+      }
+      
       // Check if iOS device (needs PWA for push notifications)
       if (isIOSDevice()) {
         console.log("[Push] iOS detected - showing PWA instructions");
@@ -111,14 +128,20 @@ export function PushNotificationPrompt() {
     
     try {
       const token = await requestNotificationPermission();
+      const device = getDeviceType();
+      
       if (token) {
         const result = await savePushToken(token);
         if (result.success) {
           setIsEnabled(true);
           setShowBanner(false);
+          // Track successful enable
+          trackNotificationAction("enable", device, navigator.userAgent);
         }
       } else {
         setShowBanner(false);
+        // Track denied
+        trackNotificationAction("denied", device, navigator.userAgent);
       }
     } catch (error) {
       console.error("Error enabling notifications:", error);
@@ -129,7 +152,11 @@ export function PushNotificationPrompt() {
 
   const handleDismiss = () => {
     setShowBanner(false);
-    // Don't save to localStorage - show again on next visit until user enables
+    // Save today's date to not show again today
+    localStorage.setItem("push-notification-last-shown", new Date().toDateString());
+    // Track dismiss action
+    const device = getDeviceType();
+    trackNotificationAction("dismiss", device, navigator.userAgent);
   };
 
   // Show iOS-specific banner

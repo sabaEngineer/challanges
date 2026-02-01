@@ -53,6 +53,7 @@ export default async function DashboardPage() {
     id: c.id,
     title: c.title,
     imageUrl: c.imageUrl,
+    frequency: (c as { frequency?: string }).frequency as "daily" | "weekly" | "custom" | undefined,
     requirements: c.requirements.map((r) => ({
       id: r.id,
       title: r.title,

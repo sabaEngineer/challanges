@@ -43,6 +43,8 @@ model User {
   challengeCommentLikes ChallengeCommentLike[]
   feedback              Feedback[]
   topPerformerAwards    TopPerformerRecord[]
+  notificationAnalytics NotificationAnalytics[]
+  sessions              UserSession[]
 
   @@map("users")
 }
@@ -117,16 +119,25 @@ enum ReactionType {
   @@map("reaction_type")
 }
 
+enum ChallengeFrequency {
+  daily
+  weekly
+  custom
+
+  @@map("challenge_frequency")
+}
+
 model Challenge {
-  id          String     @id @default(uuid())
+  id          String             @id @default(uuid())
   title       String
-  description String?    @db.Text
-  imageUrl    String?    @map("image_url") @db.Text
-  startDate   DateTime   @map("start_date") @db.Date
-  endDate     DateTime   @map("end_date") @db.Date
-  streakMode  StreakMode @default(strict) @map("streak_mode")
-  createdBy   String     @map("created_by")
-  createdAt   DateTime   @default(now()) @map("created_at")
+  description String?            @db.Text
+  imageUrl    String?            @map("image_url") @db.Text
+  startDate   DateTime           @map("start_date") @db.Date
+  endDate     DateTime           @map("end_date") @db.Date
+  frequency   ChallengeFrequency @default(daily)
+  streakMode  StreakMode         @default(strict) @map("streak_mode")
+  createdBy   String             @map("created_by")
+  createdAt   DateTime           @default(now()) @map("created_at")
 
   creator       User                   @relation("ChallengeCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   requirements  ChallengeRequirement[]
@@ -199,6 +210,7 @@ model DailyCheckin {
   checkinDate  DateTime @map("checkin_date") @db.Date
   note         String?  @db.Text
   imageUrl     String?  @map("image_url") @db.Text
+  mediaUrls    Json?    @map("media_urls") // Array of { url: string, type: "image" | "video" }
   isDone       Boolean  @default(false) @map("is_done")
   sharedToFeed Boolean  @default(false) @map("shared_to_feed")
   createdAt    DateTime @default(now()) @map("created_at")
@@ -423,4 +435,33 @@ model TopPerformerRecord {
 
   @@unique([date, userId])
   @@map("top_performer_records")
+}
+
+// Analytics: Notification modal interactions
+model NotificationAnalytics {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  action    String   // "dismiss" | "enable" | "denied"
+  device    String   // "ios" | "android" | "desktop"
+  userAgent String?  @map("user_agent") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_analytics")
+}
+
+// Analytics: User sessions for time tracking
+model UserSession {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  device      String    // "ios" | "android" | "desktop"
+  userAgent   String?   @map("user_agent") @db.Text
+  startedAt   DateTime  @default(now()) @map("started_at")
+  endedAt     DateTime? @map("ended_at")
+  durationSec Int?      @map("duration_sec")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
 }

@@ -123,21 +123,23 @@ export default async function AdminPage() {
             </div>
           </Card>
 
-          <Card className="p-6 opacity-50 cursor-not-allowed">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center text-2xl">
-                📊
+          <Link href="/admin/analytics">
+            <Card className="p-6 hover:border-amber-500/50 transition-colors cursor-pointer group">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center text-2xl">
+                  📊
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white group-hover:text-amber-400 transition-colors">
+                    Analytics
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    User sessions, notifications & engagement
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-white">
-                  Analytics
-                </h3>
-                <p className="text-sm text-slate-400">
-                  Coming soon...
-                </p>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </Link>
         </div>
       </div>
     </div>

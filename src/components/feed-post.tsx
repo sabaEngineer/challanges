@@ -33,6 +33,11 @@ interface ReactionUser {
   avatarUrl: string | null;
 }
 
+interface MediaItem {
+  url: string;
+  type: "image" | "video";
+}
+
 interface FeedPostProps {
   id: string;
   user: {
@@ -50,6 +55,7 @@ interface FeedPostProps {
   checkinDate: Date;
   note: string | null;
   imageUrl: string | null;
+  mediaUrls?: MediaItem[] | null;
   createdAt: Date;
   items: {
     id: string;
@@ -80,6 +86,97 @@ const REACTIONS: { type: ReactionType; emoji: string; label: string; activeColor
   { type: "not_bad", emoji: "👍", label: "Not Bad", activeColor: "text-violet-400" },
 ];
 
+// Media Gallery Component
+function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null; imageUrl: string | null }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  // Build media array from mediaUrls or fallback to imageUrl
+  const media: MediaItem[] = (() => {
+    if (mediaUrls && Array.isArray(mediaUrls) && mediaUrls.length > 0) {
+      return mediaUrls;
+    }
+    if (imageUrl) {
+      const isVideo = imageUrl.includes("/videos/") || 
+                      imageUrl.toLowerCase().includes(".mp4") || 
+                      imageUrl.toLowerCase().includes(".webm") || 
+                      imageUrl.toLowerCase().includes(".mov");
+      return [{ url: imageUrl, type: isVideo ? "video" as const : "image" as const }];
+    }
+    return [];
+  })();
+
+  if (media.length === 0) return null;
+
+  const goNext = () => setCurrentIndex((i) => (i + 1) % media.length);
+  const goPrev = () => setCurrentIndex((i) => (i - 1 + media.length) % media.length);
+
+  return (
+    <div className="relative rounded-lg overflow-hidden mb-4 bg-slate-800">
+      {/* Current Media */}
+      {media[currentIndex].type === "video" ? (
+        <video
+          key={media[currentIndex].url}
+          src={`${media[currentIndex].url}#t=0.1`}
+          controls
+          preload="metadata"
+          className="w-full h-auto"
+        />
+      ) : (
+        <img
+          key={media[currentIndex].url}
+          src={media[currentIndex].url}
+          alt={`Media ${currentIndex + 1}`}
+          className="w-full h-auto"
+        />
+      )}
+
+      {/* Navigation Arrows (only show if multiple media) */}
+      {media.length > 1 && (
+        <>
+          <button
+            onClick={goPrev}
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={goNext}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </>
+      )}
+
+      {/* Dots Indicator (only show if multiple media) */}
+      {media.length > 1 && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+          {media.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentIndex(index)}
+              className={`w-2 h-2 rounded-full transition-colors ${
+                index === currentIndex ? "bg-white" : "bg-white/40"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Counter badge */}
+      {media.length > 1 && (
+        <div className="absolute top-3 right-3 bg-black/60 px-2 py-1 rounded-full text-xs text-white">
+          {currentIndex + 1} / {media.length}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function FeedPost({ 
   id,
   user, 
@@ -87,6 +184,7 @@ export function FeedPost({
   checkinDate, 
   note, 
   imageUrl, 
+  mediaUrls,
   createdAt, 
   items,
   isOwnPost,
@@ -501,28 +599,8 @@ export function FeedPost({
           </div>
         )}
 
-        {/* Media (Image or Video) */}
-        {imageUrl && (
-          <div className="rounded-lg overflow-hidden mb-4 bg-slate-800">
-            {imageUrl.includes("/videos/") || 
-             imageUrl.toLowerCase().includes(".mp4") || 
-             imageUrl.toLowerCase().includes(".webm") || 
-             imageUrl.toLowerCase().includes(".mov") ? (
-              <video
-                src={`${imageUrl}#t=0.1`}
-                controls
-                preload="metadata"
-                className="w-full h-auto"
-              />
-            ) : (
-              <img
-                src={imageUrl}
-                alt="Check-in"
-                className="w-full h-auto"
-              />
-            )}
-          </div>
-        )}
+        {/* Media Gallery */}
+        <MediaGallery mediaUrls={mediaUrls} imageUrl={imageUrl} />
       </div>
 
       {/* Reactions & Comments Summary */}
