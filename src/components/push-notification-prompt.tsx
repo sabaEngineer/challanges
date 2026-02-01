@@ -117,23 +117,40 @@ export function PushNotificationPrompt() {
   if (isIOSBrowser && showBanner) {
     return (
       <div className="fixed bottom-4 left-4 right-4 z-50">
-        <div className="bg-slate-900 border border-blue-500/30 rounded-xl p-4 shadow-xl">
+        <div className="bg-slate-900 border border-amber-500/30 rounded-xl p-4 shadow-xl">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
-              <span className="text-xl">📱</span>
+            <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+              <span className="text-xl">🔔</span>
             </div>
             <div className="flex-1">
-              <h3 className="text-white font-semibold mb-1">Get Notifications on iOS</h3>
-              <p className="text-sm text-slate-400 mb-2">
-                To receive push notifications on your iPhone:
+              <h3 className="text-white font-semibold mb-1">Enable Notifications</h3>
+              <p className="text-sm text-slate-400 mb-3">
+                To get the most out of Challenges, we need to send you reminders about your daily check-ins. Please follow these steps to enable notifications:
               </p>
-              <ol className="text-sm text-slate-400 mb-3 space-y-1 list-decimal list-inside">
-                <li>Tap the <span className="text-white">Share</span> button ⬆️</li>
-                <li>Tap <span className="text-white">&quot;Add to Home Screen&quot;</span></li>
-                <li>Open the app from your home screen</li>
-              </ol>
+              <div className="text-sm text-slate-300 mb-3 space-y-2">
+                <div className="flex items-start gap-2">
+                  <span className="w-6 h-6 rounded bg-slate-700 flex items-center justify-center text-xs shrink-0">1</span>
+                  <span>Open this website in <span className="text-white font-medium">Safari</span></span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-6 h-6 rounded bg-slate-700 flex items-center justify-center text-xs shrink-0">2</span>
+                  <span>Tap <span className="text-white font-medium">aA</span> in the address bar</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-6 h-6 rounded bg-slate-700 flex items-center justify-center text-xs shrink-0">3</span>
+                  <span>Tap <span className="text-white font-medium">&quot;Add to Home Screen&quot;</span></span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-6 h-6 rounded bg-slate-700 flex items-center justify-center text-xs shrink-0">4</span>
+                  <span>Tap <span className="text-white font-medium">&quot;Add&quot;</span> in the top right</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-6 h-6 rounded bg-slate-700 flex items-center justify-center text-xs shrink-0">5</span>
+                  <span>Open the app from your home screen</span>
+                </div>
+              </div>
               <Button size="sm" variant="outline" onClick={handleDismiss}>
-                Got it
+                Maybe later
               </Button>
             </div>
             <button onClick={handleDismiss} className="text-slate-500 hover:text-slate-300">
