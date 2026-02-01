@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { getGroupedFeedPosts, getNewChallengesForFeed } from "@/actions/feed";
-import { SwipeableFeedPost } from "@/components/swipeable-feed-post";
+import { getFeedPosts, getNewChallengesForFeed } from "@/actions/feed";
+import { FeedPost } from "@/components/feed-post";
 import { NewChallengePost } from "@/components/new-challenge-post";
 import { TopPerformerBanner } from "@/components/top-performer-banner";
 import { Card } from "@/components/ui/card";
@@ -14,21 +14,21 @@ export default async function FeedPage() {
     redirect("/login");
   }
 
-  const [groupedPosts, newChallenges] = await Promise.all([
-    getGroupedFeedPosts(30),
+  const [feedPosts, newChallenges] = await Promise.all([
+    getFeedPosts(30),
     getNewChallengesForFeed(10),
   ]);
 
   // Combine and sort all feed items by date
   type FeedItem = 
-    | { type: "grouped_checkin"; data: typeof groupedPosts[0]; sortDate: Date }
+    | { type: "checkin"; data: typeof feedPosts[0]; sortDate: Date }
     | { type: "new_challenge"; data: typeof newChallenges[0]; sortDate: Date };
 
   const feedItems: FeedItem[] = [
-    ...groupedPosts.map((group) => ({
-      type: "grouped_checkin" as const,
-      data: group,
-      sortDate: new Date(group.checkins[0]?.createdAt || group.checkinDate),
+    ...feedPosts.map((post) => ({
+      type: "checkin" as const,
+      data: post,
+      sortDate: new Date(post.createdAt),
     })),
     ...newChallenges.map((challenge) => ({
       type: "new_challenge" as const,
@@ -76,16 +76,22 @@ export default async function FeedPage() {
         ) : (
           <div className="space-y-6">
             {feedItems.map((item) => {
-              if (item.type === "grouped_checkin") {
-                const group = item.data;
+              if (item.type === "checkin") {
+                const post = item.data;
                 return (
-                  <SwipeableFeedPost
-                    key={group.groupKey}
-                    groupKey={group.groupKey}
-                    user={group.user}
-                    checkinDate={group.checkinDate}
-                    isOwnPost={group.isOwnPost}
-                    checkins={group.checkins}
+                  <FeedPost
+                    key={post.id}
+                    id={post.id}
+                    user={post.user}
+                    challenge={post.challenge}
+                    checkinDate={post.checkinDate}
+                    note={post.note}
+                    imageUrl={post.imageUrl}
+                    createdAt={post.createdAt}
+                    items={post.items}
+                    isOwnPost={post.isOwnPost}
+                    initialReactions={post.reactions}
+                    initialCommentCount={post.commentCount}
                   />
                 );
               } else {
