@@ -2,11 +2,13 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { toggleReaction, type ReactionType } from "@/actions/reactions";
 import { createComment, deleteComment, getPostComments, toggleCommentLike } from "@/actions/comments";
 import { getEarnedBadges } from "@/lib/badges";
+import { CheckinModal } from "./checkin-modal";
 
 interface Comment {
   id: string;
@@ -90,10 +92,12 @@ export function SwipeableFeedPost({
   isOwnPost,
   checkins,
 }: SwipeableFeedPostProps) {
+  const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPending, startTransition] = useTransition();
   const [isAnimating, setIsAnimating] = useState(false);
   const [showReactorsModal, setShowReactorsModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   
   const [reactionsState, setReactionsState] = useState<Record<string, {
     counts: Record<ReactionType, number>;
@@ -439,7 +443,15 @@ export function SwipeableFeedPost({
               return null;
             })()}
             {isOwnPost && (
-              <span className="ml-1.5 text-xs px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded">You</span>
+              <>
+                <span className="ml-1.5 text-xs px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded">You</span>
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className="ml-1.5 text-xs px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors"
+                >
+                  Edit
+                </button>
+              </>
             )}
           </p>
           <p className="text-sm text-slate-500 mt-0.5">{formatTimeAgo(currentCheckin.createdAt)}</p>
@@ -727,6 +739,36 @@ export function SwipeableFeedPost({
             </div>
           </form>
         </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <CheckinModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            router.refresh();
+          }}
+          challengeId={currentCheckin.challenge.id}
+          challengeTitle={currentCheckin.challenge.title}
+          requirements={currentCheckin.items.map(item => ({
+            id: item.requirement.id,
+            title: item.requirement.title,
+            type: item.requirement.type as "yes_no" | "count" | "duration" | "distance",
+            targetValue: item.requirement.targetValue,
+            unit: item.requirement.unit as "reps" | "steps" | "km" | "meters" | "minutes" | "hours" | "pages" | "calories" | "liters" | "workouts" | "none",
+          }))}
+          existingCheckin={{
+            note: currentCheckin.note,
+            imageUrl: currentCheckin.imageUrl,
+            items: currentCheckin.items.map(item => ({
+              requirementId: item.requirement.id,
+              value: item.value,
+              isDone: item.isDone,
+            })),
+          }}
+          date={new Date(checkinDate).toISOString().split('T')[0]}
+        />
       )}
     </Card>
   );

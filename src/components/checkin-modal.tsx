@@ -130,11 +130,11 @@ export function CheckinModal({
       if (targetValue !== null && targetValue > 0) {
         // For numeric types with targets:
         // - If marking as done, auto-fill the target value
-        // - If unmarking, keep the value but mark as not done
+        // - If unmarking, clear the value back to empty
         if (newIsDone) {
           return { ...prev, [reqId]: { value: targetValue.toString(), isDone: true } };
         } else {
-          return { ...prev, [reqId]: { ...current, isDone: false } };
+          return { ...prev, [reqId]: { value: "", isDone: false } };
         }
       }
       

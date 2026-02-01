@@ -2,11 +2,13 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { toggleReaction, type ReactionType } from "@/actions/reactions";
 import { createComment, deleteComment, getPostComments, toggleCommentLike } from "@/actions/comments";
 import { getEarnedBadges } from "@/lib/badges";
+import { CheckinModal } from "./checkin-modal";
 
 interface Comment {
   id: string;
@@ -90,7 +92,9 @@ export function FeedPost({
   initialReactions,
   initialCommentCount = 0,
 }: FeedPostProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [showEditModal, setShowEditModal] = useState(false);
   const [reactions, setReactions] = useState(initialReactions || {
     counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0, heart: 0, smile: 0 },
     userReacted: [] as ReactionType[],
@@ -383,9 +387,17 @@ export function FeedPost({
               return null;
             })()}
             {isOwnPost && (
-              <span className="ml-1.5 text-xs px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded">
-                You
-              </span>
+              <>
+                <span className="ml-1.5 text-xs px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded">
+                  You
+                </span>
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className="ml-1.5 text-xs px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors"
+                >
+                  Edit
+                </button>
+              </>
             )}
             <span className="text-slate-400">
               {completedItems === totalItems 
@@ -840,6 +852,36 @@ export function FeedPost({
             </div>
           </form>
         </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <CheckinModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            router.refresh();
+          }}
+          challengeId={challenge.id}
+          challengeTitle={challenge.title}
+          requirements={items.map(item => ({
+            id: item.requirement.id,
+            title: item.requirement.title,
+            type: item.requirement.type as "yes_no" | "count" | "duration" | "distance",
+            targetValue: item.requirement.targetValue,
+            unit: item.requirement.unit as "reps" | "steps" | "km" | "meters" | "minutes" | "hours" | "pages" | "calories" | "liters" | "workouts" | "none",
+          }))}
+          existingCheckin={{
+            note: note,
+            imageUrl: imageUrl,
+            items: items.map(item => ({
+              requirementId: item.requirement.id,
+              value: item.value,
+              isDone: item.isDone,
+            })),
+          }}
+          date={new Date(checkinDate).toISOString().split('T')[0]}
+        />
       )}
     </Card>
   );
