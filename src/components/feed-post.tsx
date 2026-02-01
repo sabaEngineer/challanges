@@ -86,9 +86,14 @@ const REACTIONS: { type: ReactionType; emoji: string; label: string; activeColor
   { type: "not_bad", emoji: "👍", label: "Not Bad", activeColor: "text-violet-400" },
 ];
 
-// Media Gallery Component
+// Media Gallery Component with swipe support for mobile and preloading
 function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null; imageUrl: string | null }) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set([0]));
   
   // Build media array from mediaUrls or fallback to imageUrl
   const media: MediaItem[] = (() => {
@@ -105,37 +110,123 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
     return [];
   })();
 
+  // Preload all images on mount
+  useEffect(() => {
+    if (media.length <= 1) return;
+    
+    media.forEach((item, index) => {
+      if (item.type === "image") {
+        const img = new Image();
+        img.src = item.url;
+        img.onload = () => {
+          setLoadedImages(prev => new Set([...prev, index]));
+        };
+      }
+    });
+  }, [media]);
+
   if (media.length === 0) return null;
 
   const goNext = () => setCurrentIndex((i) => (i + 1) % media.length);
   const goPrev = () => setCurrentIndex((i) => (i - 1 + media.length) % media.length);
 
-  return (
-    <div className="relative rounded-lg overflow-hidden mb-4 bg-slate-800">
-      {/* Current Media */}
-      {media[currentIndex].type === "video" ? (
-        <video
-          key={media[currentIndex].url}
-          src={`${media[currentIndex].url}#t=0.1`}
-          controls
-          preload="metadata"
-          className="w-full h-auto"
-        />
-      ) : (
-        <img
-          key={media[currentIndex].url}
-          src={media[currentIndex].url}
-          alt={`Media ${currentIndex + 1}`}
-          className="w-full h-auto"
-        />
-      )}
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50;
 
-      {/* Navigation Arrows (only show if multiple media) */}
+  const onTouchStart = (e: React.TouchEvent) => {
+    // Don't track swipe on video controls
+    if ((e.target as HTMLElement).closest('video')) return;
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+    setIsDragging(true);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!touchStart || !isDragging) return;
+    const currentTouch = e.targetTouches[0].clientX;
+    setTouchEnd(currentTouch);
+    setDragOffset(currentTouch - touchStart);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) {
+      setIsDragging(false);
+      setDragOffset(0);
+      return;
+    }
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && media.length > 1) {
+      goNext();
+    }
+    if (isRightSwipe && media.length > 1) {
+      goPrev();
+    }
+
+    setIsDragging(false);
+    setDragOffset(0);
+    setTouchStart(null);
+    setTouchEnd(null);
+  };
+
+  return (
+    <div 
+      className="relative rounded-lg overflow-hidden mb-4 bg-slate-800 touch-pan-y"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Preload all images in hidden container */}
+      <div className="hidden">
+        {media.map((item, index) => 
+          item.type === "image" && index !== currentIndex ? (
+            <img key={item.url} src={item.url} alt="" />
+          ) : null
+        )}
+      </div>
+
+      {/* All media items rendered, only current one visible */}
+      <div className="relative">
+        {media.map((item, index) => (
+          <div
+            key={item.url}
+            className={`${index === currentIndex ? 'block' : 'hidden'} transition-transform duration-200 ease-out`}
+            style={{ 
+              transform: isDragging && media.length > 1 && index === currentIndex 
+                ? `translateX(${dragOffset * 0.3}px)` 
+                : 'translateX(0)',
+              opacity: isDragging && index === currentIndex ? 0.9 : 1
+            }}
+          >
+            {item.type === "video" ? (
+              <video
+                src={`${item.url}#t=0.1`}
+                controls
+                preload="metadata"
+                className="w-full h-auto"
+              />
+            ) : (
+              <img
+                src={item.url}
+                alt={`Media ${index + 1}`}
+                className="w-full h-auto select-none pointer-events-none"
+                draggable={false}
+                loading={index === 0 ? "eager" : "lazy"}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Navigation Arrows - hidden on mobile (md:flex), visible on desktop */}
       {media.length > 1 && (
         <>
           <button
             onClick={goPrev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors"
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full hidden md:flex items-center justify-center text-white transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -143,7 +234,7 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
           </button>
           <button
             onClick={goNext}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full hidden md:flex items-center justify-center text-white transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
