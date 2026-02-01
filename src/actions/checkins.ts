@@ -63,7 +63,8 @@ export async function createOrUpdateCheckin(
   date: string,
   items: CheckinItemInput[],
   note?: string,
-  imageUrl?: string
+  imageUrl?: string,
+  sharedToFeed?: boolean
 ): Promise<ActionResult> {
   console.log("createOrUpdateCheckin called with:", { challengeId, date, itemsCount: items.length });
   
@@ -211,11 +212,13 @@ export async function createOrUpdateCheckin(
         note: note || null,
         imageUrl: imageUrl || null,
         isDone: allDone,
+        sharedToFeed: sharedToFeed ?? false,
       },
       update: {
         note: note || null,
         imageUrl: imageUrl || null,
         isDone: allDone,
+        ...(sharedToFeed !== undefined && { sharedToFeed }),
       },
     });
     

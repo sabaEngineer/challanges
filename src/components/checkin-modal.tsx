@@ -58,6 +58,7 @@ export function CheckinModal({
   const [savedState, setSavedState] = useState<"none" | "partial" | "complete">("none");
   const [note, setNote] = useState(existingCheckin?.note || "");
   const [imageUrl, setImageUrl] = useState(existingCheckin?.imageUrl || "");
+  const [shareToFeed, setShareToFeed] = useState(false);
   const [items, setItems] = useState<Record<string, { value: string; isDone: boolean }>>(() => {
     const initial: Record<string, { value: string; isDone: boolean }> = {};
     requirements.forEach((req) => {
@@ -161,7 +162,7 @@ export function CheckinModal({
     }));
   };
 
-  const handleSubmit = (forceComplete = false) => {
+  const handleSubmit = (forceComplete = false, shouldShareToFeed = false) => {
     const checkinItems = requirements.map((req) => {
       const item = items[req.id];
       const numValue = item.value ? parseFloat(item.value) : undefined;
@@ -193,7 +194,8 @@ export function CheckinModal({
         today,
         checkinItems,
         note || undefined,
-        imageUrl || undefined
+        imageUrl || undefined,
+        shouldShareToFeed
       );
 
       if (result.success) {
@@ -218,9 +220,9 @@ export function CheckinModal({
   };
 
   const handleMarkComplete = () => {
-    // Submit the check-in to publish it to the feed
+    // Submit the check-in with the shareToFeed preference
     // Each requirement's isDone status is based on actual values, not forced
-    handleSubmit(true);
+    handleSubmit(true, shareToFeed);
   };
 
   const handleClose = () => {
@@ -275,6 +277,25 @@ export function CheckinModal({
                 />
               </div>
             </div>
+
+            {/* Share to Feed Toggle */}
+            <label className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-slate-800/50 border border-slate-700 cursor-pointer hover:bg-slate-800/70 transition-colors text-left">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={shareToFeed}
+                  onChange={(e) => setShareToFeed(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-amber-500 transition-colors" />
+                <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5" />
+              </div>
+              <div className="flex-1">
+                <span className="text-sm font-medium text-white">Share to Feed</span>
+                <p className="text-xs text-slate-400">Let others see your progress</p>
+              </div>
+              <span className="text-lg">{shareToFeed ? "📢" : "🔒"}</span>
+            </label>
 
             {/* Actions */}
             <div className="space-y-3">
@@ -506,12 +527,31 @@ export function CheckinModal({
 
         {/* Footer */}
         <div className="p-6 border-t border-slate-800 bg-slate-900/80">
+          {/* Share to Feed Toggle */}
+          <label className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-slate-800/50 border border-slate-700 cursor-pointer hover:bg-slate-800/70 transition-colors">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={shareToFeed}
+                onChange={(e) => setShareToFeed(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-amber-500 transition-colors" />
+              <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5" />
+            </div>
+            <div className="flex-1">
+              <span className="text-sm font-medium text-white">Share to Feed</span>
+              <p className="text-xs text-slate-400">Let others see your progress</p>
+            </div>
+            <span className="text-lg">{shareToFeed ? "📢" : "🔒"}</span>
+          </label>
+
           <div className="flex gap-3">
             <Button variant="outline" onClick={handleClose} className="flex-1">
               Cancel
             </Button>
             <Button
-              onClick={() => handleSubmit(false)}
+              onClick={() => handleSubmit(allDone, shareToFeed)}
               disabled={isPending}
               className={`flex-1 ${
                 allDone

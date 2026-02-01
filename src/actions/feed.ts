@@ -123,15 +123,12 @@ export async function getFeedPosts(limit: number = 20, offset: number = 0) {
   const user = await getCurrentUser();
 
   // Get recent check-ins with user and challenge info
-  // Only show check-ins that have content (note, image, or video)
+  // Only show check-ins that user chose to share to feed
   const checkins = await db.dailyCheckin.findMany({
     where: {
-      // Show check-ins that have at least one item recorded AND have content
+      // Show check-ins that are shared to feed
+      sharedToFeed: true,
       items: { some: {} },
-      OR: [
-        { note: { not: "" } },
-        { imageUrl: { not: "" } },
-      ],
     },
     include: {
       user: {
