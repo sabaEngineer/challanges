@@ -3,6 +3,7 @@ import { Outfit } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { FeedbackWrapper } from "@/components/feedback-wrapper";
+import { PushNotificationPrompt } from "@/components/push-notification-prompt";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -29,6 +30,7 @@ export default function RootLayout({
           {children}
         </main>
         <FeedbackWrapper />
+        <PushNotificationPrompt />
       </body>
     </html>
   );

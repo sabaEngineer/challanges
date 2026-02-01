@@ -15,16 +15,18 @@ enum UserRole {
 }
 
 model User {
-  id                String   @id @default(uuid())
-  email             String   @unique
-  fullName          String?  @map("full_name")
-  avatarUrl         String?  @map("avatar_url") @db.Text
-  googleId          String?  @map("google_id") @db.VarChar(255)
-  username          String?  @unique
-  role              UserRole @default(user)
-  topPerformerCount Int      @default(0) @map("top_performer_count")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
+  id                    String   @id @default(uuid())
+  email                 String   @unique
+  fullName              String?  @map("full_name")
+  avatarUrl             String?  @map("avatar_url") @db.Text
+  googleId              String?  @map("google_id") @db.VarChar(255)
+  username              String?  @unique
+  role                  UserRole @default(user)
+  topPerformerCount     Int      @default(0) @map("top_performer_count")
+  pushToken             String?  @map("push_token") @db.Text
+  pushNotificationsEnabled Boolean @default(false) @map("push_notifications_enabled")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
 
   challenges            Challenge[]            @relation("ChallengeCreator")
   challengeMembers      ChallengeMember[]

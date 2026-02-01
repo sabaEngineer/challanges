@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
+import { sendPushNotification } from "@/lib/firebase-admin";
 
 export async function getNotifications() {
   const user = await getCurrentUser();
@@ -122,7 +123,8 @@ export async function createNotification(data: {
   checkinId?: string;
   bookId?: string;
 }) {
-  return db.notification.create({
+  // Create in-app notification
+  const notification = await db.notification.create({
     data: {
       userId: data.userId,
       type: data.type,
@@ -133,5 +135,40 @@ export async function createNotification(data: {
       bookId: data.bookId,
     },
   });
+
+  // Only send push notifications for comments (new_comment and comment_reply)
+  const shouldSendPush = data.type === "new_comment" || data.type === "comment_reply";
+
+  if (shouldSendPush) {
+    try {
+      const user = await db.user.findUnique({
+        where: { id: data.userId },
+        select: {
+          pushToken: true,
+          pushNotificationsEnabled: true,
+        },
+      });
+
+      if (user?.pushNotificationsEnabled && user.pushToken) {
+        // Build URL based on notification type
+        let url = "/notifications";
+        if (data.challengeId) {
+          url = `/challenges/${data.challengeId}`;
+        }
+
+        await sendPushNotification(
+          user.pushToken,
+          data.title,
+          data.message,
+          { url, notificationId: notification.id }
+        );
+      }
+    } catch (error) {
+      console.error("Failed to send push notification:", error);
+      // Don't fail the whole operation if push fails
+    }
+  }
+
+  return notification;
 }
 

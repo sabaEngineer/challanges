@@ -7,6 +7,7 @@ import type { ActionResult } from "@/lib/types";
 
 /**
  * Notify other challenge members when someone completes their daily check-in
+ * Note: Push notifications for check-ins are disabled - only in-app notifications
  */
 async function notifyChallengeMembersOfCheckin(
   challengeId: string,
@@ -32,7 +33,7 @@ async function notifyChallengeMembersOfCheckin(
 
     if (otherMembers.length === 0) return;
 
-    // Create notifications for all other members
+    // Create in-app notifications only (no push for check-ins)
     const notifications = otherMembers.map((member) => ({
       userId: member.userId,
       type: "member_checkin" as const,
@@ -46,7 +47,7 @@ async function notifyChallengeMembersOfCheckin(
       data: notifications,
     });
     
-    console.log("Successfully created", notifications.length, "notifications");
+    console.log("Successfully created", notifications.length, "in-app notifications");
   } catch (error) {
     console.error("Error sending checkin notifications:", error);
   }
