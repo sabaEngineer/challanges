@@ -15,6 +15,13 @@ function isRunningAsPWA(): boolean {
   );
 }
 
+// Check if mobile device
+function isMobileDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = window.navigator.userAgent;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+}
+
 // Check if iOS device (any browser) - iOS doesn't support push in browser
 function isIOSDevice(): boolean {
   if (typeof window === "undefined") return false;
@@ -35,6 +42,12 @@ export function PushNotificationPrompt() {
 
   useEffect(() => {
     const init = async () => {
+      // Only show on mobile devices
+      if (!isMobileDevice()) {
+        console.log("[Push] Not a mobile device - skipping");
+        return;
+      }
+      
       // First check if user is logged in
       const status = await getPushNotificationStatus();
       if (!status.isLoggedIn) {
