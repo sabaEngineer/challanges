@@ -134,18 +134,26 @@ export function PushNotificationPrompt() {
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="w-6 h-6 rounded bg-slate-700 flex items-center justify-center text-xs shrink-0">2</span>
-                  <span>Tap <span className="text-white font-medium">aA</span> in the address bar</span>
+                  <span>Tap <span className="text-white font-medium">⋯</span> (three dots) at the bottom</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="w-6 h-6 rounded bg-slate-700 flex items-center justify-center text-xs shrink-0">3</span>
-                  <span>Tap <span className="text-white font-medium">&quot;Add to Home Screen&quot;</span></span>
+                  <span>Tap <span className="text-white font-medium">Share</span>
+                    <svg className="w-4 h-4 inline mx-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                  </span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="w-6 h-6 rounded bg-slate-700 flex items-center justify-center text-xs shrink-0">4</span>
-                  <span>Tap <span className="text-white font-medium">&quot;Add&quot;</span> in the top right</span>
+                  <span>Tap <span className="text-white font-medium">⋯</span> (three dots) again</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="w-6 h-6 rounded bg-slate-700 flex items-center justify-center text-xs shrink-0">5</span>
+                  <span>Tap <span className="text-white font-medium">&quot;Add to Home Screen&quot;</span></span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-6 h-6 rounded bg-slate-700 flex items-center justify-center text-xs shrink-0">6</span>
                   <span>Open the app from your home screen</span>
                 </div>
               </div>
