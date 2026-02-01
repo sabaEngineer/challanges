@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
@@ -220,14 +221,14 @@ export async function createOrUpdateCheckin(
         checkinDate,
         note: note || null,
         imageUrl: firstImageUrl,
-        mediaUrls: mediaUrls && mediaUrls.length > 0 ? mediaUrls : undefined,
+        mediaUrls: mediaUrls && mediaUrls.length > 0 ? (mediaUrls as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
         isDone: allDone,
         sharedToFeed: sharedToFeed ?? false,
       },
       update: {
         note: note || null,
         imageUrl: firstImageUrl,
-        mediaUrls: mediaUrls && mediaUrls.length > 0 ? mediaUrls : undefined,
+        mediaUrls: mediaUrls && mediaUrls.length > 0 ? (mediaUrls as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
         isDone: allDone,
         ...(sharedToFeed !== undefined && { sharedToFeed }),
       },
