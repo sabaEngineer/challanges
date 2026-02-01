@@ -15,15 +15,14 @@ function isRunningAsPWA(): boolean {
   );
 }
 
-// Check if iOS Safari (regular browser, not PWA)
-function isIOSSafari(): boolean {
+// Check if iOS device (any browser) - iOS doesn't support push in browser
+function isIOSDevice(): boolean {
   if (typeof window === "undefined") return false;
   const ua = window.navigator.userAgent;
   const isIOS = /iPad|iPhone|iPod/.test(ua);
-  const isWebkit = /WebKit/.test(ua);
-  const isChrome = /CriOS/.test(ua);
-  const isFirefox = /FxiOS/.test(ua);
-  return isIOS && isWebkit && !isChrome && !isFirefox && !isRunningAsPWA();
+  // If running as PWA, push notifications can work
+  if (isRunningAsPWA()) return false;
+  return isIOS;
 }
 
 export function PushNotificationPrompt() {
@@ -36,10 +35,16 @@ export function PushNotificationPrompt() {
 
   useEffect(() => {
     const init = async () => {
-      // Check if iOS Safari (needs PWA)
-      if (isIOSSafari()) {
+      console.log("[Push] Init - UA:", navigator.userAgent);
+      console.log("[Push] isIOSDevice:", isIOSDevice());
+      console.log("[Push] isRunningAsPWA:", isRunningAsPWA());
+      
+      // Check if iOS device (needs PWA for push notifications)
+      if (isIOSDevice()) {
+        console.log("[Push] iOS detected - showing PWA instructions");
         setIsIOSBrowser(true);
         const dismissed = localStorage.getItem("push-notification-ios-dismissed");
+        console.log("[Push] iOS dismissed:", dismissed);
         if (!dismissed) setShowBanner(true);
         return;
       }
@@ -47,6 +52,7 @@ export function PushNotificationPrompt() {
       // Check if notifications are supported
       const hasNotification = typeof window !== "undefined" && "Notification" in window;
       const hasServiceWorker = "serviceWorker" in navigator;
+      console.log("[Push] hasNotification:", hasNotification, "hasServiceWorker:", hasServiceWorker);
       
       if (hasNotification && hasServiceWorker) {
         setIsSupported(true);
