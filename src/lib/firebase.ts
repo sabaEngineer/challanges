@@ -1,8 +1,7 @@
-// Firebase client-side configuration
+// Firebase client-side configuration for push notifications
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import { getMessaging, getToken, onMessage, Messaging } from "firebase/messaging";
 
-// Firebase config - these values are safe to expose (client-side)
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -15,7 +14,6 @@ const firebaseConfig = {
 let app: FirebaseApp | undefined;
 let messaging: Messaging | undefined;
 
-// Initialize Firebase (client-side only)
 export function initializeFirebase() {
   if (typeof window === "undefined") return null;
   
@@ -28,13 +26,10 @@ export function initializeFirebase() {
   return app;
 }
 
-// Get Firebase Messaging instance
-export function getFirebaseMessaging() {
+function getFirebaseMessaging() {
   if (typeof window === "undefined") return null;
   
-  if (!app) {
-    initializeFirebase();
-  }
+  if (!app) initializeFirebase();
   
   if (!messaging && app) {
     try {
@@ -48,37 +43,27 @@ export function getFirebaseMessaging() {
   return messaging;
 }
 
-// Request notification permission and get FCM token
 export async function requestNotificationPermission(): Promise<string | null> {
   if (typeof window === "undefined") return null;
   
   try {
     const permission = await Notification.requestPermission();
+    if (permission !== "granted") return null;
     
-    if (permission !== "granted") {
-      console.log("Notification permission denied");
-      return null;
-    }
+    const msg = getFirebaseMessaging();
+    if (!msg) return null;
     
-    const messaging = getFirebaseMessaging();
-    if (!messaging) return null;
-    
-    // Get the FCM token
-    const token = await getToken(messaging, {
+    return await getToken(msg, {
       vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
     });
-    
-    return token;
   } catch (error) {
     console.error("Error getting notification permission:", error);
     return null;
   }
 }
 
-// Listen for foreground messages
 export function onForegroundMessage(callback: (payload: unknown) => void) {
-  const messaging = getFirebaseMessaging();
-  if (!messaging) return () => {};
-  
-  return onMessage(messaging, callback);
+  const msg = getFirebaseMessaging();
+  if (!msg) return () => {};
+  return onMessage(msg, callback);
 }
