@@ -35,6 +35,13 @@ export function PushNotificationPrompt() {
 
   useEffect(() => {
     const init = async () => {
+      // First check if user is logged in
+      const status = await getPushNotificationStatus();
+      if (!status.isLoggedIn) {
+        console.log("[Push] User not logged in - skipping");
+        return;
+      }
+      
       console.log("[Push] Init - UA:", navigator.userAgent);
       console.log("[Push] isIOSDevice:", isIOSDevice());
       console.log("[Push] isRunningAsPWA:", isRunningAsPWA());
@@ -43,9 +50,7 @@ export function PushNotificationPrompt() {
       if (isIOSDevice()) {
         console.log("[Push] iOS detected - showing PWA instructions");
         setIsIOSBrowser(true);
-        const dismissed = localStorage.getItem("push-notification-ios-dismissed");
-        console.log("[Push] iOS dismissed:", dismissed);
-        if (!dismissed) setShowBanner(true);
+        setShowBanner(true);
         return;
       }
 
@@ -65,14 +70,11 @@ export function PushNotificationPrompt() {
           console.error("Service Worker registration failed:", error);
         }
         
-        // Check current status
-        const status = await getPushNotificationStatus();
         setIsEnabled(status.enabled);
         
-        // Show banner if not enabled and not denied
+        // Show banner if not enabled and not denied - show every time until enabled
         if (!status.enabled && Notification.permission !== "denied") {
-          const dismissed = localStorage.getItem("push-notification-dismissed");
-          if (!dismissed) setShowBanner(true);
+          setShowBanner(true);
         }
         
         // Listen for foreground messages
@@ -107,10 +109,7 @@ export function PushNotificationPrompt() {
 
   const handleDismiss = () => {
     setShowBanner(false);
-    localStorage.setItem(
-      isIOSBrowser ? "push-notification-ios-dismissed" : "push-notification-dismissed",
-      "true"
-    );
+    // Don't save to localStorage - show again on next visit until user enables
   };
 
   // Show iOS-specific banner

@@ -53,11 +53,11 @@ export async function disablePushNotifications(): Promise<ActionResult> {
 }
 
 // Get push notification status for the current user
-export async function getPushNotificationStatus(): Promise<{ enabled: boolean; hasToken: boolean }> {
+export async function getPushNotificationStatus(): Promise<{ enabled: boolean; hasToken: boolean; isLoggedIn: boolean }> {
   const user = await getCurrentUser();
   
   if (!user) {
-    return { enabled: false, hasToken: false };
+    return { enabled: false, hasToken: false, isLoggedIn: false };
   }
 
   try {
@@ -72,10 +72,11 @@ export async function getPushNotificationStatus(): Promise<{ enabled: boolean; h
     return {
       enabled: userData?.pushNotificationsEnabled || false,
       hasToken: !!userData?.pushToken,
+      isLoggedIn: true,
     };
   } catch (error) {
     console.error("Failed to get push notification status:", error);
-    return { enabled: false, hasToken: false };
+    return { enabled: false, hasToken: false, isLoggedIn: true };
   }
 }
 
