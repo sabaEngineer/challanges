@@ -9,6 +9,7 @@ import { toggleReaction, type ReactionType } from "@/actions/reactions";
 import { createComment, deleteComment, getPostComments, toggleCommentLike } from "@/actions/comments";
 import { getEarnedBadges } from "@/lib/badges";
 import { CheckinModal } from "./checkin-modal";
+import { ChallengeType, ChallengeUnit } from "@/lib/types";
 
 interface Comment {
   id: string;
@@ -867,9 +868,9 @@ export function FeedPost({
           requirements={items.map(item => ({
             id: item.requirement.id,
             title: item.requirement.title,
-            type: item.requirement.type as "yes_no" | "count" | "duration" | "distance",
+            type: item.requirement.type as ChallengeType,
             targetValue: item.requirement.targetValue,
-            unit: item.requirement.unit as "reps" | "steps" | "km" | "meters" | "minutes" | "hours" | "pages" | "calories" | "liters" | "workouts" | "none",
+            unit: item.requirement.unit as ChallengeUnit,
           }))}
           existingCheckin={{
             note: note,
