@@ -150,34 +150,40 @@ export function TodaysChallenges({ challenges: initialChallenges }: TodaysChalle
                 key={challenge.id}
                 className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl hover:bg-slate-800 transition-colors"
               >
-                {/* Thumbnail */}
-                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                  {challenge.imageUrl ? (
-                    <img
-                      src={challenge.imageUrl}
-                      alt={challenge.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-amber-500/20 flex items-center justify-center">
-                      <span className="text-lg">🎯</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-white truncate">{challenge.title}</h3>
-                  <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-                    <span>{completedItems}/{totalItems} requirements</span>
-                    {challenge.membership.currentStreak > 0 && (
-                      <>
-                        <span>•</span>
-                        <span className="text-amber-400">🔥 {challenge.membership.currentStreak} streak</span>
-                      </>
+                {/* Clickable area for navigation */}
+                <Link
+                  href={`/challenges/${challenge.id}`}
+                  className="flex items-center gap-3 flex-1 min-w-0"
+                >
+                  {/* Thumbnail */}
+                  <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                    {challenge.imageUrl ? (
+                      <img
+                        src={challenge.imageUrl}
+                        alt={challenge.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-amber-500/20 flex items-center justify-center">
+                        <span className="text-lg">🎯</span>
+                      </div>
                     )}
                   </div>
-                </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-white truncate hover:text-amber-400 transition-colors">{challenge.title}</h3>
+                    <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                      <span>{completedItems}/{totalItems} requirements</span>
+                      {challenge.membership.currentStreak > 0 && (
+                        <>
+                          <span>•</span>
+                          <span className="text-amber-400">🔥 {challenge.membership.currentStreak} streak</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </Link>
 
                 {/* Action */}
                 <Button
