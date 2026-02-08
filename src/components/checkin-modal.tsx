@@ -41,6 +41,7 @@ interface CheckinModalProps {
   requirements: Requirement[];
   existingCheckin?: ExistingCheckin | null;
   date?: string;
+  isPastDate?: boolean;
   onStreakUpdate?: (newStreak: number) => void;
 }
 
@@ -52,6 +53,7 @@ export function CheckinModal({
   requirements,
   existingCheckin,
   date,
+  isPastDate,
   onStreakUpdate,
 }: CheckinModalProps) {
   const router = useRouter();
@@ -306,7 +308,9 @@ export function CheckinModal({
               </div>
               <div className="flex-1">
                 <span className="text-sm font-medium text-white">Share to Feed</span>
-                <p className="text-xs text-slate-400">Let others see your progress</p>
+                <p className="text-xs text-slate-400">
+                  {isPastDate ? "Share this past check-in update" : "Let others see your progress"}
+                </p>
               </div>
               <span className="text-lg">{shareToFeed ? "📢" : "🔒"}</span>
             </label>
@@ -357,8 +361,21 @@ export function CheckinModal({
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-white">Daily Check-in</h2>
-              <p className="text-sm text-slate-400 mt-1">{challengeTitle}</p>
+              <h2 className="text-xl font-bold text-white">
+                {isPastDate ? "Update Past Check-in" : "Daily Check-in"}
+              </h2>
+              <p className="text-sm text-slate-400 mt-1">
+                {challengeTitle}
+                {isPastDate && date && (
+                  <span className="ml-2 text-amber-400">
+                    • {new Date(date + "T00:00:00").toLocaleDateString("en-US", { 
+                      weekday: "short", 
+                      month: "short", 
+                      day: "numeric" 
+                    })}
+                  </span>
+                )}
+              </p>
             </div>
             <button
               onClick={handleClose}
@@ -556,7 +573,9 @@ export function CheckinModal({
             </div>
             <div className="flex-1">
               <span className="text-sm font-medium text-white">Share to Feed</span>
-              <p className="text-xs text-slate-400">Let others see your progress</p>
+              <p className="text-xs text-slate-400">
+                {isPastDate ? "Share this past check-in update" : "Let others see your progress"}
+              </p>
             </div>
             <span className="text-lg">{shareToFeed ? "📢" : "🔒"}</span>
           </label>

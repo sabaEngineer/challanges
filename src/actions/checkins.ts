@@ -499,6 +499,43 @@ export async function getMyCheckins(challengeId: string) {
   });
 }
 
+// Get all past check-ins for a challenge (formatted for the PastCheckinsSection)
+export async function getPastCheckins(challengeId: string) {
+  const user = await getCurrentUser();
+  if (!user) return { success: false, data: [] };
+
+  try {
+    const checkins = await db.dailyCheckin.findMany({
+      where: {
+        challengeId,
+        userId: user.id,
+      },
+      include: {
+        items: true,
+      },
+      orderBy: { checkinDate: "desc" },
+    });
+
+    const formattedCheckins = checkins.map((c) => ({
+      date: c.checkinDate.toISOString().split("T")[0],
+      isDone: c.isDone,
+      note: c.note,
+      imageUrl: c.imageUrl,
+      mediaUrls: c.mediaUrls as { url: string; type: "image" | "video" }[] | null,
+      items: c.items.map((item) => ({
+        requirementId: item.requirementId,
+        value: item.value?.toString() || null,
+        isDone: item.isDone,
+      })),
+    }));
+
+    return { success: true, data: formattedCheckins };
+  } catch (error) {
+    console.error("Error getting past checkins:", error);
+    return { success: false, data: [] };
+  }
+}
+
 export async function getMyActiveChallengesForToday() {
   const user = await getCurrentUser();
   if (!user) return [];

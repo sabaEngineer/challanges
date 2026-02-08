@@ -611,7 +611,7 @@ export function FeedPost({
       {/* Post Content */}
       <div className="px-4 pb-4">
         {/* Status & Date */}
-        <div className="flex items-center gap-2 mb-3 pl-14">
+        <div className="flex items-center gap-2 mb-3 pl-14 flex-wrap">
           <div className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
             completedItems === totalItems 
               ? "bg-emerald-500/20 text-emerald-400" 
@@ -626,6 +626,12 @@ export function FeedPost({
               day: "numeric",
             })}
           </span>
+          {/* Past check-in indicator: if checkinDate is different day from createdAt */}
+          {new Date(checkinDate).toDateString() !== new Date(createdAt).toDateString() && (
+            <span className="px-2 py-0.5 rounded-full text-xs bg-violet-500/20 text-violet-400">
+              📝 Updated
+            </span>
+          )}
         </div>
 
         {/* Requirements Progress */}

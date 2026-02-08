@@ -5,6 +5,7 @@ import { Navbar } from "@/components/navbar";
 import { FeedbackWrapper } from "@/components/feedback-wrapper";
 import { PushNotificationPrompt } from "@/components/push-notification-prompt";
 import { SessionTracker } from "@/components/session-tracker";
+import { VisitorTracker } from "@/components/visitor-tracker";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -33,6 +34,7 @@ export default function RootLayout({
         <FeedbackWrapper />
         <PushNotificationPrompt />
         <SessionTracker />
+        <VisitorTracker />
       </body>
     </html>
   );

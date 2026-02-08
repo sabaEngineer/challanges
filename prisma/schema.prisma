@@ -45,6 +45,7 @@ model User {
   topPerformerAwards    TopPerformerRecord[]
   notificationAnalytics NotificationAnalytics[]
   sessions              UserSession[]
+  visitorTracks         VisitorTrack[]
 
   @@map("users")
 }
@@ -464,4 +465,27 @@ model UserSession {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_sessions")
+}
+
+// Analytics: Visitor tracking (device, OS, browser)
+model VisitorTrack {
+  id           String   @id @default(uuid())
+  visitorId    String   @map("visitor_id") // Unique visitor identifier (stored in localStorage)
+  userId       String?  @map("user_id") // Optional if user is logged in
+  deviceType   String   @map("device_type") // "desktop" | "mobile" | "tablet"
+  os           String   // "ios" | "android" | "windows" | "macos" | "linux" | "other"
+  browser      String   // "chrome" | "safari" | "firefox" | "edge" | "samsung" | "other"
+  userAgent    String?  @map("user_agent") @db.Text
+  screenWidth  Int?     @map("screen_width")
+  screenHeight Int?     @map("screen_height")
+  language     String?
+  referrer     String?  @db.Text
+  page         String?  @db.Text // Page URL visited
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([visitorId])
+  @@index([createdAt])
+  @@map("visitor_tracks")
 }

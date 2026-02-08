@@ -221,3 +221,178 @@ export async function getSessionAnalytics() {
     return { error: "Failed to fetch analytics" };
   }
 }
+
+// Track visitor (device, OS, browser)
+interface VisitorData {
+  visitorId: string;
+  deviceType: string;
+  os: string;
+  browser: string;
+  userAgent?: string;
+  screenWidth?: number;
+  screenHeight?: number;
+  language?: string;
+  referrer?: string;
+  page?: string;
+}
+
+export async function trackVisitor(data: VisitorData) {
+  try {
+    const user = await getCurrentUser();
+    
+    await db.visitorTrack.create({
+      data: {
+        visitorId: data.visitorId,
+        userId: user?.id || null,
+        deviceType: data.deviceType,
+        os: data.os,
+        browser: data.browser,
+        userAgent: data.userAgent,
+        screenWidth: data.screenWidth,
+        screenHeight: data.screenHeight,
+        language: data.language,
+        referrer: data.referrer,
+        page: data.page,
+      },
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Error tracking visitor:", error);
+    return { success: false };
+  }
+}
+
+// Admin: Get visitor analytics
+export async function getVisitorAnalytics() {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    return { error: "Unauthorized" };
+  }
+
+  try {
+    // Get total visits
+    const totalVisits = await db.visitorTrack.count();
+    
+    // Get unique visitors
+    const uniqueVisitors = await db.visitorTrack.groupBy({
+      by: ["visitorId"],
+    });
+    
+    // Get visits by device type
+    const visitsByDevice = await db.visitorTrack.groupBy({
+      by: ["deviceType"],
+      _count: { id: true },
+    });
+    
+    // Get visits by OS
+    const visitsByOS = await db.visitorTrack.groupBy({
+      by: ["os"],
+      _count: { id: true },
+    });
+    
+    // Get visits by browser
+    const visitsByBrowser = await db.visitorTrack.groupBy({
+      by: ["browser"],
+      _count: { id: true },
+    });
+    
+    // Get today's visits
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayVisits = await db.visitorTrack.count({
+      where: {
+        createdAt: { gte: today },
+      },
+    });
+    
+    // Get today's unique visitors
+    const todayUniqueVisitors = await db.visitorTrack.groupBy({
+      by: ["visitorId"],
+      where: {
+        createdAt: { gte: today },
+      },
+    });
+    
+    // Get visits in last 7 days by day
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
+      
+      const dayVisits = await db.visitorTrack.count({
+        where: {
+          createdAt: {
+            gte: date,
+            lt: nextDate,
+          },
+        },
+      });
+      
+      const dayUniqueVisitors = await db.visitorTrack.groupBy({
+        by: ["visitorId"],
+        where: {
+          createdAt: {
+            gte: date,
+            lt: nextDate,
+          },
+        },
+      });
+      
+      last7Days.push({
+        date: date.toISOString().split("T")[0],
+        visits: dayVisits,
+        uniqueVisitors: dayUniqueVisitors.length,
+      });
+    }
+    
+    // Get recent visits
+    const recentVisits = await db.visitorTrack.findMany({
+      take: 50,
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: {
+          select: { id: true, fullName: true, username: true, avatarUrl: true },
+        },
+      },
+    });
+
+    return {
+      success: true,
+      data: {
+        totalVisits,
+        uniqueVisitors: uniqueVisitors.length,
+        todayVisits,
+        todayUniqueVisitors: todayUniqueVisitors.length,
+        visitsByDevice: visitsByDevice.map((v) => ({
+          device: v.deviceType,
+          count: v._count.id,
+        })),
+        visitsByOS: visitsByOS.map((v) => ({
+          os: v.os,
+          count: v._count.id,
+        })),
+        visitsByBrowser: visitsByBrowser.map((v) => ({
+          browser: v.browser,
+          count: v._count.id,
+        })),
+        last7Days,
+        recentVisits: recentVisits.map((v) => ({
+          id: v.id,
+          visitorId: v.visitorId,
+          user: v.user,
+          deviceType: v.deviceType,
+          os: v.os,
+          browser: v.browser,
+          page: v.page,
+          createdAt: v.createdAt,
+        })),
+      },
+    };
+  } catch (error) {
+    console.error("Error getting visitor analytics:", error);
+    return { error: "Failed to fetch analytics" };
+  }
+}

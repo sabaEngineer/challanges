@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/back-button";
 import { MembersList } from "@/components/members-list";
+import { PastCheckinsSection } from "@/components/past-checkins";
 import { JoinButton } from "./join-button";
 import { CheckinButton } from "./checkin-button";
 import { AddDefaultRequirementButton } from "./add-requirement-button";
@@ -436,6 +437,17 @@ export default async function ChallengePage({ params }: PageProps) {
                 isActive={isActive}
                 isMember={isMember}
                 currentStreak={currentUserMembership?.currentStreak || 0}
+              />
+            )}
+
+            {/* Past Check-ins - for active members who have past days to update */}
+            {isMember && isStarted && challenge.requirements.length > 0 && (
+              <PastCheckinsSection
+                challengeId={id}
+                challengeTitle={challenge.title}
+                startDate={challenge.startDate}
+                endDate={challenge.endDate}
+                requirements={requirementsData}
               />
             )}
 
