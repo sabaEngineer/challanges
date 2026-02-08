@@ -216,7 +216,7 @@ export function PastCheckinsSection({
                       </div>
                       <Button
                         size="sm"
-                        variant={isDone ? "outline" : "default"}
+                        variant={isDone ? "outline" : "primary"}
                         onClick={() => handleDateClick(date)}
                         className={isDone ? "" : "bg-amber-500 hover:bg-amber-600"}
                       >
