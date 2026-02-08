@@ -18,6 +18,7 @@ model User {
   id                    String   @id @default(uuid())
   email                 String   @unique
   fullName              String?  @map("full_name")
+  nameSetManually       Boolean  @default(false) @map("name_set_manually")
   avatarUrl             String?  @map("avatar_url") @db.Text
   googleId              String?  @map("google_id") @db.VarChar(255)
   username              String?  @unique

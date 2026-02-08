@@ -126,6 +126,8 @@ export async function updateProfile(data: {
       data: {
         fullName: data.fullName,
         username: data.username || null,
+        // Mark name as manually set if fullName is being updated
+        ...(data.fullName !== undefined && { nameSetManually: true }),
       },
     });
 
