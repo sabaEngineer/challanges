@@ -11,6 +11,7 @@ interface ChallengeRequirement {
   type: ChallengeType;
   targetValue?: number | string | { toString(): string } | null;
   unit: ChallengeUnit;
+  requirementGroup?: number;
 }
 
 interface Creator {
@@ -150,30 +151,50 @@ export function ChallengeListItem({
           )}
 
           {/* Requirements */}
-          {requirements.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {requirements.slice(0, 3).map((req, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-amber-500/10 border border-amber-500/30 rounded text-xs"
-                >
-                  <span className="text-amber-400 font-medium">
-                    {formatRequirement(req)}
+          {requirements.length > 0 && (() => {
+            const groups = [...new Set(requirements.map(r => r.requirementGroup ?? 0))].sort((a, b) => a - b);
+            const hasMultipleGroups = groups.length > 1;
+            
+            return (
+              <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                {groups.slice(0, 2).map((groupNum, groupIdx) => {
+                  const groupReqs = requirements.filter(r => (r.requirementGroup ?? 0) === groupNum);
+                  return (
+                    <div key={groupNum} className="flex flex-wrap items-center gap-1.5">
+                      {groupIdx > 0 && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-bold text-violet-400 bg-violet-500/20 rounded">
+                          OR
+                        </span>
+                      )}
+                      {groupReqs.slice(0, hasMultipleGroups ? 1 : 3).map((req, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-amber-500/10 border border-amber-500/30 rounded text-xs"
+                        >
+                          <span className="text-amber-400 font-medium">
+                            {formatRequirement(req)}
+                          </span>
+                          {req.title && (
+                            <span className="text-amber-400/60">
+                              — {req.title}
+                            </span>
+                          )}
+                        </span>
+                      ))}
+                      {groupReqs.length > (hasMultipleGroups ? 1 : 3) && (
+                        <span className="text-xs text-slate-500">+{groupReqs.length - (hasMultipleGroups ? 1 : 3)}</span>
+                      )}
+                    </div>
+                  );
+                })}
+                {groups.length > 2 && (
+                  <span className="inline-flex items-center px-2 py-1 bg-slate-800 rounded text-xs text-slate-400">
+                    +{groups.length - 2} options
                   </span>
-                  {req.title && (
-                    <span className="text-amber-400/60">
-                      — {req.title}
-                    </span>
-                  )}
-                </span>
-              ))}
-              {requirements.length > 3 && (
-                <span className="inline-flex items-center px-2 py-1 bg-slate-800 rounded text-xs text-slate-400">
-                  +{requirements.length - 3}
-                </span>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            );
+          })()}
 
           {/* Stats Row */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mb-3">
@@ -288,30 +309,50 @@ export function ChallengeListItem({
             </div>
 
             {/* Requirements */}
-            {requirements.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {requirements.slice(0, 3).map((req, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-amber-500/10 border border-amber-500/30 rounded text-xs"
-                  >
-                    <span className="text-amber-400 font-medium">
-                      {formatRequirement(req)}
+            {requirements.length > 0 && (() => {
+              const groups = [...new Set(requirements.map(r => r.requirementGroup ?? 0))].sort((a, b) => a - b);
+              const hasMultipleGroups = groups.length > 1;
+              
+              return (
+                <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                  {groups.slice(0, 2).map((groupNum, groupIdx) => {
+                    const groupReqs = requirements.filter(r => (r.requirementGroup ?? 0) === groupNum);
+                    return (
+                      <div key={groupNum} className="flex flex-wrap items-center gap-1.5">
+                        {groupIdx > 0 && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold text-violet-400 bg-violet-500/20 rounded">
+                            OR
+                          </span>
+                        )}
+                        {groupReqs.slice(0, hasMultipleGroups ? 1 : 3).map((req, i) => (
+                          <span
+                            key={i}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-amber-500/10 border border-amber-500/30 rounded text-xs"
+                          >
+                            <span className="text-amber-400 font-medium">
+                              {formatRequirement(req)}
+                            </span>
+                            {req.title && (
+                              <span className="text-amber-400/60">
+                                — {req.title}
+                              </span>
+                            )}
+                          </span>
+                        ))}
+                        {groupReqs.length > (hasMultipleGroups ? 1 : 3) && (
+                          <span className="text-xs text-slate-500">+{groupReqs.length - (hasMultipleGroups ? 1 : 3)}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {groups.length > 2 && (
+                    <span className="inline-flex items-center px-2 py-1 bg-slate-800 rounded text-xs text-slate-400">
+                      +{groups.length - 2} options
                     </span>
-                    {req.title && (
-                      <span className="text-amber-400/60">
-                        — {req.title}
-                      </span>
-                    )}
-                  </span>
-                ))}
-                {requirements.length > 3 && (
-                  <span className="inline-flex items-center px-2 py-1 bg-slate-800 rounded text-xs text-slate-400">
-                    +{requirements.length - 3}
-                  </span>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Bottom Row - Stats */}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 mt-auto">

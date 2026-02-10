@@ -153,13 +153,14 @@ model Challenge {
 }
 
 model ChallengeRequirement {
-  id          String        @id @default(uuid())
-  challengeId String        @map("challenge_id")
-  title       String?
-  type        ChallengeType
-  targetValue Decimal?      @map("target_value") @db.Decimal
-  unit        ChallengeUnit
-  createdAt   DateTime      @default(now()) @map("created_at")
+  id               String        @id @default(uuid())
+  challengeId      String        @map("challenge_id")
+  title            String?
+  type             ChallengeType
+  targetValue      Decimal?      @map("target_value") @db.Decimal
+  unit             ChallengeUnit
+  requirementGroup Int           @default(0) @map("requirement_group") // Group index for OR logic
+  createdAt        DateTime      @default(now()) @map("created_at")
 
   challenge         Challenge           @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   dailyCheckinItems DailyCheckinItem[]

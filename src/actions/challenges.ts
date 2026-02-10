@@ -11,6 +11,7 @@ interface RequirementInput {
   type: ChallengeType;
   targetValue: string;
   unit: ChallengeUnit;
+  group: number;
 }
 
 interface CreateChallengeResult {
@@ -58,20 +59,21 @@ export async function createChallenge(
     const type = formData.get(`requirements[${index}][type]`) as ChallengeType;
     const targetValue = formData.get(`requirements[${index}][targetValue]`) as string;
     const unit = formData.get(`requirements[${index}][unit]`) as ChallengeUnit;
+    const group = parseInt(formData.get(`requirements[${index}][group]`) as string) || 0;
     
     // Validate non-yes_no requirements have a target value
     if (type !== "yes_no" && (!targetValue || parseFloat(targetValue) <= 0)) {
       return { success: false, error: `Requirement #${index + 1}: Please enter a valid target value` };
     }
     
-    requirements.push({ title, type, targetValue, unit });
+    requirements.push({ title, type, targetValue, unit, group });
     index++;
   }
 
   // If no requirements provided, add a default "yes/no" requirement
   const finalRequirements = requirements.length > 0 
     ? requirements 
-    : [{ title: "Complete daily goal", type: "yes_no" as ChallengeType, targetValue: null, unit: "none" as ChallengeUnit }];
+    : [{ title: "Complete daily goal", type: "yes_no" as ChallengeType, targetValue: null, unit: "none" as ChallengeUnit, group: 0 }];
 
   const challenge = await db.challenge.create({
     data: {
@@ -88,6 +90,7 @@ export async function createChallenge(
           type: req.type as PrismaChallengeType,
           targetValue: req.type !== "yes_no" && req.targetValue ? parseFloat(req.targetValue) : null,
           unit: req.unit as PrismaChallengeUnit,
+          requirementGroup: req.group,
         })),
       },
       // Auto-add creator as active member
@@ -148,6 +151,7 @@ interface UpdateRequirementInput {
   type: ChallengeType;
   targetValue: string;
   unit: ChallengeUnit;
+  group: number;
 }
 
 export async function updateChallenge(
@@ -193,12 +197,13 @@ export async function updateChallenge(
     const type = formData.get(`requirements[${index}][type]`) as ChallengeType;
     const targetValue = formData.get(`requirements[${index}][targetValue]`) as string;
     const unit = formData.get(`requirements[${index}][unit]`) as ChallengeUnit;
+    const group = parseInt(formData.get(`requirements[${index}][group]`) as string) || 0;
     
     if (type !== "yes_no" && (!targetValue || parseFloat(targetValue) <= 0)) {
       return { success: false, error: `Requirement #${index + 1}: Please enter a valid target value` };
     }
     
-    requirements.push({ id: reqId || undefined, title: reqTitle, type, targetValue, unit });
+    requirements.push({ id: reqId || undefined, title: reqTitle, type, targetValue, unit, group });
     index++;
   }
 
@@ -237,6 +242,7 @@ export async function updateChallenge(
             type: req.type as PrismaChallengeType,
             targetValue: req.type !== "yes_no" && req.targetValue ? parseFloat(req.targetValue) : null,
             unit: req.unit as PrismaChallengeUnit,
+            requirementGroup: req.group,
           },
         });
       } else {
@@ -248,6 +254,7 @@ export async function updateChallenge(
             type: req.type as PrismaChallengeType,
             targetValue: req.type !== "yes_no" && req.targetValue ? parseFloat(req.targetValue) : null,
             unit: req.unit as PrismaChallengeUnit,
+            requirementGroup: req.group,
           },
         });
       }
@@ -399,6 +406,7 @@ export async function addDefaultRequirement(challengeId: string): Promise<Action
       type: "yes_no",
       targetValue: null,
       unit: "none",
+      requirementGroup: 0,
     },
   });
 

@@ -1046,6 +1046,7 @@ export function FeedPost({
             type: item.requirement.type as ChallengeType,
             targetValue: item.requirement.targetValue,
             unit: item.requirement.unit as ChallengeUnit,
+            requirementGroup: (item.requirement as { requirementGroup?: number }).requirementGroup,
           }))}
           existingCheckin={{
             note: note,

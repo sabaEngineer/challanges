@@ -18,6 +18,7 @@ interface Requirement {
   type: ChallengeType;
   targetValue?: number | string | null;
   unit: ChallengeUnit;
+  requirementGroup?: number;
 }
 
 interface TodayCheckin {

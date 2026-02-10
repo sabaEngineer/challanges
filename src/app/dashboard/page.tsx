@@ -60,6 +60,7 @@ export default async function DashboardPage() {
       type: r.type as "distance" | "time" | "count" | "yes_no",
       targetValue: r.targetValue?.toString() || null,
       unit: r.unit as "reps" | "steps" | "km" | "meters" | "minutes" | "hours" | "pages" | "calories" | "liters" | "workouts" | "none",
+      requirementGroup: r.requirementGroup,
     })),
     membership: c.membership,
     todayCheckin: c.todayCheckin ? {

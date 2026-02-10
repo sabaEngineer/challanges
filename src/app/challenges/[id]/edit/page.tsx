@@ -46,6 +46,7 @@ export default async function EditChallengePage({ params }: PageProps) {
       type: req.type,
       targetValue: req.targetValue?.toString() || "",
       unit: req.unit,
+      group: req.requirementGroup,
     })),
   };
 

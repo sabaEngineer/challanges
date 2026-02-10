@@ -184,8 +184,35 @@ export async function createOrUpdateCheckin(
     };
   });
 
-  // Check if all items are done (using validated values)
-  const allDone = validatedItems.every((item) => item.isDone);
+  // Check if requirements are done considering group OR logic
+  // Requirements within a group are AND (all must be done)
+  // Different groups are OR (completing any one group counts as done)
+  const checkGroupCompletion = () => {
+    // Get unique groups
+    const groups = [...new Set(challenge.requirements.map(r => r.requirementGroup))];
+    
+    // If only one group (or no groups), use simple AND logic
+    if (groups.length <= 1) {
+      return validatedItems.every((item) => item.isDone);
+    }
+    
+    // Check if ANY group is fully complete
+    for (const groupNum of groups) {
+      const groupRequirements = challenge.requirements.filter(r => r.requirementGroup === groupNum);
+      const groupItems = validatedItems.filter(item => 
+        groupRequirements.some(r => r.id === item.requirementId)
+      );
+      
+      // Check if ALL items in this group are done
+      if (groupItems.length > 0 && groupItems.every(item => item.isDone)) {
+        return true; // This group is complete, so check-in is done
+      }
+    }
+    
+    return false; // No group is fully complete
+  };
+  
+  const allDone = checkGroupCompletion();
 
   // Log validation results for debugging (use console.error to ensure visibility)
   console.error("=== CHECKIN DEBUG ===");
@@ -195,6 +222,7 @@ export async function createOrUpdateCheckin(
       requirementId: item.requirementId,
       type: req?.type,
       targetValue: req?.targetValue?.toString(),
+      group: req?.requirementGroup,
       value: item.value,
       isDone: item.isDone,
     };
@@ -797,9 +825,33 @@ export async function quickCheckin(
       where: { checkinId: checkin.id },
     });
 
-    const allDone =
-      challenge.requirements.length === allItems.length &&
-      allItems.every((item) => item.isDone);
+    // Check completion with group OR logic
+    const checkGroupCompletion = () => {
+      const groups = [...new Set(challenge.requirements.map(r => r.requirementGroup))];
+      
+      // If only one group, use simple AND logic
+      if (groups.length <= 1) {
+        return challenge.requirements.length === allItems.length &&
+               allItems.every((item) => item.isDone);
+      }
+      
+      // Check if ANY group is fully complete
+      for (const groupNum of groups) {
+        const groupRequirements = challenge.requirements.filter(r => r.requirementGroup === groupNum);
+        const groupItems = allItems.filter(item => 
+          groupRequirements.some(r => r.id === item.requirementId)
+        );
+        
+        if (groupItems.length === groupRequirements.length && 
+            groupItems.every(item => item.isDone)) {
+          return true;
+        }
+      }
+      
+      return false;
+    };
+    
+    const allDone = checkGroupCompletion();
 
     await db.dailyCheckin.update({
       where: { id: checkin.id },

@@ -18,6 +18,7 @@ interface Requirement {
   type: ChallengeType;
   targetValue?: number | string | null;
   unit: ChallengeUnit;
+  requirementGroup?: number;
 }
 
 interface CheckinItem {
@@ -202,7 +203,7 @@ export function CheckinModal({
       };
     });
 
-    const willBeComplete = forceComplete || requirements.every((req) => items[req.id]?.isDone);
+    const willBeComplete = forceComplete || checkGroupCompletion();
 
     startTransition(async () => {
       const result = await createOrUpdateCheckin(
@@ -246,12 +247,47 @@ export function CheckinModal({
     onClose();
   };
 
-  const allDone = requirements.every((req) => items[req.id]?.isDone);
+  // Check if done using group OR logic
+  const checkGroupCompletion = () => {
+    const groups = [...new Set(requirements.map(r => r.requirementGroup ?? 0))];
+    
+    // If only one group, use simple AND logic
+    if (groups.length <= 1) {
+      return requirements.every((req) => items[req.id]?.isDone);
+    }
+    
+    // Check if ANY group is fully complete
+    for (const groupNum of groups) {
+      const groupReqs = requirements.filter(r => (r.requirementGroup ?? 0) === groupNum);
+      if (groupReqs.every(req => items[req.id]?.isDone)) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+  
+  const allDone = checkGroupCompletion();
   const completedCount = requirements.filter((req) => items[req.id]?.isDone).length;
   const partialCount = requirements.filter((req) => {
     const status = getStatus(req, items[req.id]);
     return status === "partial";
   }).length;
+  
+  // Get unique groups for rendering
+  const groups = [...new Set(requirements.map(r => r.requirementGroup ?? 0))].sort((a, b) => a - b);
+  const hasMultipleGroups = groups.length > 1;
+  
+  // Check which groups are complete
+  const getGroupCompletionStatus = (groupNum: number) => {
+    const groupReqs = requirements.filter(r => (r.requirementGroup ?? 0) === groupNum);
+    const allComplete = groupReqs.every(req => items[req.id]?.isDone);
+    const anyPartial = groupReqs.some(req => {
+      const status = getStatus(req, items[req.id]);
+      return status === "partial" || status === "complete";
+    });
+    return { allComplete, anyPartial };
+  };
 
   if (!isOpen) return null;
 
@@ -273,9 +309,19 @@ export function CheckinModal({
             {/* Message */}
             <h2 className="text-2xl font-bold text-white mb-2">Progress Saved!</h2>
             <p className="text-slate-400 mb-6">
-              Great start! You&apos;ve logged {completedCount} of {requirements.length} tasks.
-              <br />
-              Come back when you&apos;re ready to finish!
+              {hasMultipleGroups ? (
+                <>
+                  Great start! Complete any one option to finish.
+                  <br />
+                  Come back when you&apos;re ready!
+                </>
+              ) : (
+                <>
+                  Great start! You&apos;ve logged {completedCount} of {requirements.length} tasks.
+                  <br />
+                  Come back when you&apos;re ready to finish!
+                </>
+              )}
             </p>
 
             {/* Progress Summary */}
@@ -283,13 +329,26 @@ export function CheckinModal({
               <div className="flex items-center justify-between text-sm mb-2">
                 <span className="text-slate-400">Today&apos;s Progress</span>
                 <span className="text-blue-400 font-medium">
-                  {Math.round((completedCount / requirements.length) * 100)}%
+                  {hasMultipleGroups 
+                    ? `${Math.round(Math.max(...groups.map(g => {
+                        const groupReqs = requirements.filter(r => (r.requirementGroup ?? 0) === g);
+                        const groupComplete = groupReqs.filter(r => items[r.id]?.isDone).length;
+                        return (groupComplete / groupReqs.length) * 100;
+                      })))}%`
+                    : `${Math.round((completedCount / requirements.length) * 100)}%`
+                  }
                 </span>
               </div>
               <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-300"
-                  style={{ width: `${(completedCount / requirements.length) * 100}%` }}
+                  style={{ width: `${hasMultipleGroups 
+                    ? Math.max(...groups.map(g => {
+                        const groupReqs = requirements.filter(r => (r.requirementGroup ?? 0) === g);
+                        const groupComplete = groupReqs.filter(r => items[r.id]?.isDone).length;
+                        return (groupComplete / groupReqs.length) * 100;
+                      }))
+                    : (completedCount / requirements.length) * 100}%` }}
                 />
               </div>
             </div>
@@ -391,17 +450,29 @@ export function CheckinModal({
           <div className="mt-4">
             <div className="flex items-center justify-between text-sm mb-2">
               <span className="text-slate-400">Progress</span>
-              <span className={allDone ? "text-emerald-400" : partialCount > 0 ? "text-blue-400" : "text-amber-400"}>
-                {completedCount} / {requirements.length} complete
-                {partialCount > 0 && !allDone && ` • ${partialCount} in progress`}
-              </span>
+              {hasMultipleGroups ? (
+                <span className={allDone ? "text-emerald-400" : "text-amber-400"}>
+                  {allDone ? "✓ Complete (1 option done)" : `${groups.filter(g => getGroupCompletionStatus(g).allComplete).length} / ${groups.length} options complete`}
+                </span>
+              ) : (
+                <span className={allDone ? "text-emerald-400" : partialCount > 0 ? "text-blue-400" : "text-amber-400"}>
+                  {completedCount} / {requirements.length} complete
+                  {partialCount > 0 && !allDone && ` • ${partialCount} in progress`}
+                </span>
+              )}
             </div>
             <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-300 ${
                   allDone ? "bg-emerald-500" : "bg-amber-500"
                 }`}
-                style={{ width: `${(completedCount / requirements.length) * 100}%` }}
+                style={{ width: `${allDone ? 100 : hasMultipleGroups 
+                  ? Math.max(...groups.map(g => {
+                      const groupReqs = requirements.filter(r => (r.requirementGroup ?? 0) === g);
+                      const groupComplete = groupReqs.filter(r => items[r.id]?.isDone).length;
+                      return (groupComplete / groupReqs.length) * 100;
+                    }))
+                  : (completedCount / requirements.length) * 100}%` }}
               />
             </div>
           </div>
@@ -409,120 +480,154 @@ export function CheckinModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {/* Requirements */}
-          {requirements.map((req) => {
-            const item = items[req.id];
-            const isYesNo = req.type === "yes_no";
-            const status = getStatus(req, item);
-            const progress = getProgress(req, item);
-
-            // Dynamic styling based on status
-            const getBorderColor = () => {
-              if (status === "complete") return "border-emerald-500/40";
-              if (status === "partial") return "border-blue-500/40";
-              return "border-slate-700";
-            };
-
-            const getBgColor = () => {
-              if (status === "complete") return "bg-emerald-500/10";
-              if (status === "partial") return "bg-blue-500/10";
-              return "bg-slate-800/50";
-            };
-
-            const getCheckboxStyle = () => {
-              if (status === "complete") return "bg-emerald-500 border-emerald-500";
-              if (status === "partial") return "bg-blue-500/50 border-blue-500";
-              return "border-slate-600 hover:border-slate-500";
-            };
-
-            const getTextColor = () => {
-              if (status === "complete") return "text-emerald-400";
-              if (status === "partial") return "text-blue-400";
-              return "text-white";
-            };
-
+          {/* Requirements - grouped by requirementGroup */}
+          {groups.map((groupNum, groupIdx) => {
+            const groupReqs = requirements.filter(r => (r.requirementGroup ?? 0) === groupNum);
+            const { allComplete: groupComplete } = getGroupCompletionStatus(groupNum);
+            
             return (
-              <div
-                key={req.id}
-                className={`p-4 rounded-xl border transition-all ${getBorderColor()} ${getBgColor()}`}
-              >
-                <div className="flex items-start gap-3">
-                  {/* Checkbox */}
-                  <button
-                    onClick={() => handleToggle(req.id, req)}
-                    className={`flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${getCheckboxStyle()}`}
-                  >
-                    {status === "complete" && (
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                    {status === "partial" && (
-                      <div className="w-2 h-2 bg-blue-400 rounded-sm" />
-                    )}
-                  </button>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`font-medium ${getTextColor()}`}>
-                        {isYesNo
-                          ? req.title || "Complete this task"
-                          : `${req.targetValue} ${challengeUnitLabels[req.unit]}`}
+              <div key={groupNum}>
+                {/* OR separator between groups */}
+                {groupIdx > 0 && (
+                  <div className="flex items-center gap-2 my-4">
+                    <div className="flex-1 h-px bg-violet-500/30" />
+                    <span className="px-3 py-1 text-xs font-bold text-violet-400 bg-violet-500/20 rounded-full">
+                      OR
+                    </span>
+                    <div className="flex-1 h-px bg-violet-500/30" />
+                  </div>
+                )}
+                
+                {/* Group container */}
+                <div className={`space-y-3 ${hasMultipleGroups ? `p-3 rounded-xl border-2 border-dashed ${groupComplete ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-600 bg-slate-800/20'}` : ''}`}>
+                  {hasMultipleGroups && (
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`text-xs font-medium px-2 py-1 rounded ${groupComplete ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'}`}>
+                        Option {groupIdx + 1} {groupComplete && '✓'}
                       </span>
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-slate-700 text-slate-400">
-                        {challengeTypeLabels[req.type]}
-                      </span>
+                      {groupComplete && (
+                        <span className="text-xs text-emerald-400">Complete!</span>
+                      )}
                     </div>
-                    {req.title && !isYesNo && (
-                      <p className="text-sm text-slate-400">{req.title}</p>
-                    )}
+                  )}
+                  
+                  {groupReqs.map((req) => {
+                    const item = items[req.id];
+                    const isYesNo = req.type === "yes_no";
+                    const status = getStatus(req, item);
+                    const progress = getProgress(req, item);
 
-                    {/* Value input for non-yes_no types */}
-                    {!isYesNo && (
-                      <div className="mt-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <input
-                            type="number"
-                            value={item.value}
-                            onChange={(e) => handleValueChange(req.id, e.target.value, req)}
-                            placeholder="0"
-                            className={`w-24 px-3 py-2 bg-slate-900 border rounded-lg text-white text-center focus:outline-none transition-colors ${
-                              status === "complete"
-                                ? "border-emerald-500/50 focus:border-emerald-500"
-                                : status === "partial"
-                                ? "border-blue-500/50 focus:border-blue-500"
-                                : "border-slate-700 focus:border-amber-500"
-                            }`}
-                          />
-                          <span className="text-slate-400 text-sm">
-                            / {req.targetValue} {challengeUnitLabels[req.unit]}
-                          </span>
-                          {/* Progress percentage badge */}
-                          {progress > 0 && progress < 100 && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-medium">
-                              {progress}%
-                            </span>
-                          )}
-                          {progress >= 100 && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium">
-                              ✓ 100%
-                            </span>
-                          )}
-                        </div>
-                        
-                        {/* Progress bar for this requirement */}
-                        <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-300 ${
-                              progress >= 100 ? "bg-emerald-500" : "bg-blue-500"
-                            }`}
-                            style={{ width: `${progress}%` }}
-                          />
+                    // Dynamic styling based on status
+                    const getBorderColor = () => {
+                      if (status === "complete") return "border-emerald-500/40";
+                      if (status === "partial") return "border-blue-500/40";
+                      return "border-slate-700";
+                    };
+
+                    const getBgColor = () => {
+                      if (status === "complete") return "bg-emerald-500/10";
+                      if (status === "partial") return "bg-blue-500/10";
+                      return "bg-slate-800/50";
+                    };
+
+                    const getCheckboxStyle = () => {
+                      if (status === "complete") return "bg-emerald-500 border-emerald-500";
+                      if (status === "partial") return "bg-blue-500/50 border-blue-500";
+                      return "border-slate-600 hover:border-slate-500";
+                    };
+
+                    const getTextColor = () => {
+                      if (status === "complete") return "text-emerald-400";
+                      if (status === "partial") return "text-blue-400";
+                      return "text-white";
+                    };
+
+                    return (
+                      <div
+                        key={req.id}
+                        className={`p-4 rounded-xl border transition-all ${getBorderColor()} ${getBgColor()}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          {/* Checkbox */}
+                          <button
+                            onClick={() => handleToggle(req.id, req)}
+                            className={`flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${getCheckboxStyle()}`}
+                          >
+                            {status === "complete" && (
+                              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                            {status === "partial" && (
+                              <div className="w-2 h-2 bg-blue-400 rounded-sm" />
+                            )}
+                          </button>
+
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`font-medium ${getTextColor()}`}>
+                                {isYesNo
+                                  ? req.title || "Complete this task"
+                                  : `${req.targetValue} ${challengeUnitLabels[req.unit]}`}
+                              </span>
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-slate-700 text-slate-400">
+                                {challengeTypeLabels[req.type]}
+                              </span>
+                            </div>
+                            {req.title && !isYesNo && (
+                              <p className="text-sm text-slate-400">{req.title}</p>
+                            )}
+
+                            {/* Value input for non-yes_no types */}
+                            {!isYesNo && (
+                              <div className="mt-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <input
+                                    type="number"
+                                    value={item.value}
+                                    onChange={(e) => handleValueChange(req.id, e.target.value, req)}
+                                    placeholder="0"
+                                    className={`w-24 px-3 py-2 bg-slate-900 border rounded-lg text-white text-center focus:outline-none transition-colors ${
+                                      status === "complete"
+                                        ? "border-emerald-500/50 focus:border-emerald-500"
+                                        : status === "partial"
+                                        ? "border-blue-500/50 focus:border-blue-500"
+                                        : "border-slate-700 focus:border-amber-500"
+                                    }`}
+                                  />
+                                  <span className="text-slate-400 text-sm">
+                                    / {req.targetValue} {challengeUnitLabels[req.unit]}
+                                  </span>
+                                  {/* Progress percentage badge */}
+                                  {progress > 0 && progress < 100 && (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-medium">
+                                      {progress}%
+                                    </span>
+                                  )}
+                                  {progress >= 100 && (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium">
+                                      ✓ 100%
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {/* Progress bar for this requirement */}
+                                <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full transition-all duration-300 ${
+                                      progress >= 100 ? "bg-emerald-500" : "bg-blue-500"
+                                    }`}
+                                    style={{ width: `${progress}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    )}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
             );

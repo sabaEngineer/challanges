@@ -145,6 +145,7 @@ export default async function ChallengePage({ params }: PageProps) {
     type: req.type as ChallengeType,
     targetValue: req.targetValue?.toString() || null,
     unit: req.unit as ChallengeUnit,
+    requirementGroup: req.requirementGroup,
   }));
 
   // Transform today's checkin for the button
@@ -282,29 +283,60 @@ export default async function ChallengePage({ params }: PageProps) {
                   <h4 className="text-sm font-medium text-slate-400 mb-3">
                     {isOneTime ? "Requirements" : "Daily Requirements"}
                   </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {challenge.requirements.map((req, i) => (
-                      <div
-                        key={i}
-                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30"
-                      >
-                        <span className="text-amber-400">🎯</span>
-                        <div className="flex flex-col">
-                          <span className="text-amber-400 font-medium">
-                            {formatRequirement(req)}
-                          </span>
-                          {req.title && (
-                            <span className="text-xs text-amber-400/70">
-                              {req.title}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs text-amber-400/60 px-1.5 py-0.5 rounded bg-amber-500/20">
-                          {challengeTypeLabels[req.type as ChallengeType]}
-                        </span>
+                  {(() => {
+                    const groups = [...new Set(challenge.requirements.map(r => r.requirementGroup))].sort((a, b) => a - b);
+                    const hasMultipleGroups = groups.length > 1;
+                    
+                    return (
+                      <div className="space-y-3">
+                        {groups.map((groupNum, groupIdx) => {
+                          const groupReqs = challenge.requirements.filter(r => r.requirementGroup === groupNum);
+                          
+                          return (
+                            <div key={groupNum}>
+                              {/* OR separator between groups */}
+                              {groupIdx > 0 && (
+                                <div className="flex items-center gap-2 my-3">
+                                  <div className="flex-1 h-px bg-violet-500/30" />
+                                  <span className="px-2 py-0.5 text-xs font-bold text-violet-400 bg-violet-500/20 rounded-full">
+                                    OR
+                                  </span>
+                                  <div className="flex-1 h-px bg-violet-500/30" />
+                                </div>
+                              )}
+                              
+                              <div className={`flex flex-wrap gap-2 ${hasMultipleGroups ? 'p-3 rounded-lg bg-slate-800/30 border border-slate-700/50' : ''}`}>
+                                {hasMultipleGroups && (
+                                  <span className="w-full text-xs text-slate-500 mb-1">Option {groupIdx + 1}:</span>
+                                )}
+                                {groupReqs.map((req, i) => (
+                                  <div
+                                    key={i}
+                                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30"
+                                  >
+                                    <span className="text-amber-400">🎯</span>
+                                    <div className="flex flex-col">
+                                      <span className="text-amber-400 font-medium">
+                                        {formatRequirement(req)}
+                                      </span>
+                                      {req.title && (
+                                        <span className="text-xs text-amber-400/70">
+                                          {req.title}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-xs text-amber-400/60 px-1.5 py-0.5 rounded bg-amber-500/20">
+                                      {challengeTypeLabels[req.type as ChallengeType]}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </div>
               )}
 
