@@ -205,23 +205,24 @@ function MediaLightbox({
       {/* Close button */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 z-10 w-10 h-10 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors"
+        onTouchEnd={(e) => { e.stopPropagation(); onClose(); }}
+        className="absolute top-4 right-4 z-[60] w-12 h-12 bg-black/70 hover:bg-black/80 active:bg-black/90 rounded-full flex items-center justify-center text-white transition-colors pointer-events-auto touch-auto"
       >
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
 
       {/* Media counter */}
       {media.length > 1 && (
-        <div className="absolute top-4 left-4 z-10 px-3 py-1.5 bg-black/50 rounded-full text-white text-sm font-medium">
+        <div className="absolute top-4 left-4 z-[60] px-3 py-1.5 bg-black/70 rounded-full text-white text-sm font-medium pointer-events-none">
           {currentIndex + 1} / {media.length}
         </div>
       )}
 
       {/* Zoom indicator */}
       {scale > 1 && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 bg-black/50 rounded-full text-white text-sm">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[60] px-3 py-1.5 bg-black/70 rounded-full text-white text-sm pointer-events-none">
           {Math.round(scale * 100)}%
         </div>
       )}
@@ -231,17 +232,19 @@ function MediaLightbox({
         <>
           <button
             onClick={(e) => { e.stopPropagation(); onNavigate((currentIndex - 1 + media.length) % media.length); }}
-            className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors"
+            onTouchEnd={(e) => { e.stopPropagation(); onNavigate((currentIndex - 1 + media.length) % media.length); }}
+            className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-[60] w-12 h-12 md:w-14 md:h-14 bg-black/70 hover:bg-black/80 active:bg-black/90 rounded-full flex items-center justify-center text-white transition-colors pointer-events-auto touch-auto"
           >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onNavigate((currentIndex + 1) % media.length); }}
-            className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors"
+            onTouchEnd={(e) => { e.stopPropagation(); onNavigate((currentIndex + 1) % media.length); }}
+            className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-[60] w-12 h-12 md:w-14 md:h-14 bg-black/70 hover:bg-black/80 active:bg-black/90 rounded-full flex items-center justify-center text-white transition-colors pointer-events-auto touch-auto"
           >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
@@ -251,12 +254,13 @@ function MediaLightbox({
       {/* Media container */}
       <div
         ref={containerRef}
-        className="w-full h-full flex items-center justify-center overflow-hidden touch-none"
+        className="absolute inset-0 z-[10] flex items-center justify-center overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onWheel={handleWheel}
         onClick={handleDoubleTap}
+        style={{ touchAction: scale > 1 ? 'none' : 'pan-y' }}
       >
         {currentMedia.type === "video" ? (
           <video
@@ -286,13 +290,14 @@ function MediaLightbox({
 
       {/* Dots indicator */}
       {media.length > 1 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[60] flex gap-3 pointer-events-auto">
           {media.map((_, index) => (
             <button
               key={index}
               onClick={(e) => { e.stopPropagation(); onNavigate(index); }}
-              className={`w-2.5 h-2.5 rounded-full transition-all ${
-                index === currentIndex ? "bg-white scale-125" : "bg-white/40 hover:bg-white/60"
+              onTouchEnd={(e) => { e.stopPropagation(); onNavigate(index); }}
+              className={`w-3 h-3 rounded-full transition-all touch-auto ${
+                index === currentIndex ? "bg-white scale-125" : "bg-white/40 hover:bg-white/60 active:bg-white/80"
               }`}
             />
           ))}
@@ -300,7 +305,7 @@ function MediaLightbox({
       )}
 
       {/* Instructions (show briefly) */}
-      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 text-white/50 text-xs text-center">
+      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-[60] text-white/50 text-xs text-center pointer-events-none">
         <span className="hidden md:inline">Scroll to zoom • Double-click to zoom • Arrow keys to navigate</span>
         <span className="md:hidden">Pinch to zoom • Double-tap to zoom</span>
       </div>
