@@ -231,6 +231,48 @@ export async function createOrUpdateCheckin(
   try {
     console.log("Creating/updating checkin for date:", checkinDate, "allDone:", allDone);
     
+    // Check daily share limit (max 2 shared check-ins per day)
+    if (sharedToFeed) {
+      // Get today's date boundaries (UTC)
+      const todayStart = new Date();
+      todayStart.setUTCHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setUTCHours(23, 59, 59, 999);
+      
+      // Check if this checkin is already shared (updating existing shared checkin doesn't count against limit)
+      const existingCheckin = await db.dailyCheckin.findUnique({
+        where: {
+          challengeId_userId_checkinDate: {
+            challengeId,
+            userId: user.id,
+            checkinDate,
+          },
+        },
+        select: { sharedToFeed: true },
+      });
+      
+      // Only check limit if this is a new share (not already shared)
+      if (!existingCheckin?.sharedToFeed) {
+        const todaySharedCount = await db.dailyCheckin.count({
+          where: {
+            userId: user.id,
+            sharedToFeed: true,
+            createdAt: {
+              gte: todayStart,
+              lte: todayEnd,
+            },
+          },
+        });
+        
+        if (todaySharedCount >= 2) {
+          return { 
+            success: false, 
+            error: "Daily share limit reached! You can only share 2 check-ins to the feed per day." 
+          };
+        }
+      }
+    }
+    
     // Create or update the daily checkin
     // Store mediaUrls array, and keep first image as imageUrl for backward compatibility
     const firstImageUrl = mediaUrls?.length ? mediaUrls[0].url : null;
@@ -865,5 +907,52 @@ export async function quickCheckin(
   revalidatePath(`/challenges/${challengeId}`);
   revalidatePath("/dashboard");
   return { success: true, streak: newStreak };
+}
+
+/**
+ * Check if user can share more check-ins today (max 2 per day)
+ * Returns { canShare: boolean, remainingShares: number }
+ */
+export async function checkDailyShareLimit(challengeId: string, checkinDate: string): Promise<{ canShare: boolean; remainingShares: number }> {
+  const user = await getCurrentUser();
+  if (!user) return { canShare: false, remainingShares: 0 };
+
+  // Get today's date boundaries (UTC)
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setUTCHours(23, 59, 59, 999);
+
+  // Check if this specific checkin is already shared (editing an existing shared post doesn't count)
+  const existingCheckin = await db.dailyCheckin.findUnique({
+    where: {
+      challengeId_userId_checkinDate: {
+        challengeId,
+        userId: user.id,
+        checkinDate: new Date(checkinDate),
+      },
+    },
+    select: { sharedToFeed: true },
+  });
+
+  // If already shared, they can continue editing it
+  if (existingCheckin?.sharedToFeed) {
+    return { canShare: true, remainingShares: 2 };
+  }
+
+  // Count today's shared check-ins
+  const todaySharedCount = await db.dailyCheckin.count({
+    where: {
+      userId: user.id,
+      sharedToFeed: true,
+      createdAt: {
+        gte: todayStart,
+        lte: todayEnd,
+      },
+    },
+  });
+
+  const remainingShares = Math.max(0, 2 - todaySharedCount);
+  return { canShare: remainingShares > 0, remainingShares };
 }
 

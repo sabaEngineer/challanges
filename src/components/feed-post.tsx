@@ -83,8 +83,230 @@ const REACTIONS: { type: ReactionType; emoji: string; label: string; activeColor
   { type: "heart", emoji: "❤️", label: "Love", activeColor: "text-red-400" },
   { type: "strong", emoji: "💪", label: "Strong", activeColor: "text-emerald-400" },
   { type: "kudos", emoji: "👏", label: "Kudos", activeColor: "text-blue-400" },
-  { type: "not_bad", emoji: "👍", label: "Not Bad", activeColor: "text-violet-400" },
+  { type: "not_bad", emoji: "😂", label: "Haha", activeColor: "text-violet-400" },
 ];
+
+// Media Lightbox Component for zooming
+function MediaLightbox({ 
+  media, 
+  currentIndex, 
+  onClose, 
+  onNavigate 
+}: { 
+  media: MediaItem[]; 
+  currentIndex: number; 
+  onClose: () => void; 
+  onNavigate: (index: number) => void;
+}) {
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const currentMedia = media[currentIndex];
+
+  // Reset zoom when changing media
+  useEffect(() => {
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+  }, [currentIndex]);
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft" && media.length > 1) onNavigate((currentIndex - 1 + media.length) % media.length);
+      if (e.key === "ArrowRight" && media.length > 1) onNavigate((currentIndex + 1) % media.length);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentIndex, media.length, onClose, onNavigate]);
+
+  // Calculate distance between two touch points
+  const getTouchDistance = (touches: React.TouchList) => {
+    if (touches.length < 2) return null;
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      // Pinch zoom start
+      setLastTouchDistance(getTouchDistance(e.touches));
+    } else if (e.touches.length === 1 && scale > 1) {
+      // Pan start when zoomed
+      setIsDragging(true);
+      setDragStart({
+        x: e.touches[0].clientX - position.x,
+        y: e.touches[0].clientY - position.y
+      });
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      // Pinch zoom
+      const distance = getTouchDistance(e.touches);
+      if (distance && lastTouchDistance) {
+        const newScale = Math.min(Math.max(scale * (distance / lastTouchDistance), 1), 4);
+        setScale(newScale);
+        if (newScale === 1) setPosition({ x: 0, y: 0 });
+      }
+      setLastTouchDistance(distance);
+    } else if (e.touches.length === 1 && isDragging && scale > 1) {
+      // Pan when zoomed
+      setPosition({
+        x: e.touches[0].clientX - dragStart.x,
+        y: e.touches[0].clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setLastTouchDistance(null);
+  };
+
+  // Double tap to zoom
+  const lastTap = useRef<number>(0);
+  const handleDoubleTap = (e: React.MouseEvent | React.TouchEvent) => {
+    const now = Date.now();
+    if (now - lastTap.current < 300) {
+      // Double tap detected
+      if (scale > 1) {
+        setScale(1);
+        setPosition({ x: 0, y: 0 });
+      } else {
+        setScale(2);
+      }
+    }
+    lastTap.current = now;
+  };
+
+  // Mouse wheel zoom for desktop
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.min(Math.max(scale * delta, 1), 4);
+    setScale(newScale);
+    if (newScale === 1) setPosition({ x: 0, y: 0 });
+  };
+
+  return (
+    <div 
+      className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 z-10 w-10 h-10 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors"
+      >
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      {/* Media counter */}
+      {media.length > 1 && (
+        <div className="absolute top-4 left-4 z-10 px-3 py-1.5 bg-black/50 rounded-full text-white text-sm font-medium">
+          {currentIndex + 1} / {media.length}
+        </div>
+      )}
+
+      {/* Zoom indicator */}
+      {scale > 1 && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 bg-black/50 rounded-full text-white text-sm">
+          {Math.round(scale * 100)}%
+        </div>
+      )}
+
+      {/* Navigation arrows */}
+      {media.length > 1 && (
+        <>
+          <button
+            onClick={(e) => { e.stopPropagation(); onNavigate((currentIndex - 1 + media.length) % media.length); }}
+            className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onNavigate((currentIndex + 1) % media.length); }}
+            className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </>
+      )}
+
+      {/* Media container */}
+      <div
+        ref={containerRef}
+        className="w-full h-full flex items-center justify-center overflow-hidden touch-none"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onWheel={handleWheel}
+        onClick={handleDoubleTap}
+      >
+        {currentMedia.type === "video" ? (
+          <video
+            src={currentMedia.url}
+            controls
+            autoPlay
+            className="max-w-full max-h-full"
+            style={{
+              transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
+              transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <img
+            src={currentMedia.url}
+            alt={`Media ${currentIndex + 1}`}
+            className="max-w-full max-h-full object-contain select-none"
+            style={{
+              transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
+              transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+            }}
+            draggable={false}
+          />
+        )}
+      </div>
+
+      {/* Dots indicator */}
+      {media.length > 1 && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+          {media.map((_, index) => (
+            <button
+              key={index}
+              onClick={(e) => { e.stopPropagation(); onNavigate(index); }}
+              className={`w-2.5 h-2.5 rounded-full transition-all ${
+                index === currentIndex ? "bg-white scale-125" : "bg-white/40 hover:bg-white/60"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Instructions (show briefly) */}
+      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 text-white/50 text-xs text-center">
+        <span className="hidden md:inline">Scroll to zoom • Double-click to zoom • Arrow keys to navigate</span>
+        <span className="md:hidden">Pinch to zoom • Double-tap to zoom</span>
+      </div>
+    </div>
+  );
+}
 
 // Media Gallery Component with swipe support for mobile and preloading
 function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null; imageUrl: string | null }) {
@@ -94,6 +316,7 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set([0]));
+  const [showLightbox, setShowLightbox] = useState(false);
   
   // Build media array from mediaUrls or fallback to imageUrl
   const media: MediaItem[] = (() => {
@@ -172,86 +395,102 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
     setTouchEnd(null);
   };
 
+  const handleMediaClick = (e: React.MouseEvent) => {
+    // Don't open lightbox if clicking video controls
+    if ((e.target as HTMLElement).closest('video')) return;
+    setShowLightbox(true);
+  };
+
   return (
-    <div 
-      className="relative rounded-lg overflow-hidden mb-4 bg-slate-800 touch-pan-y"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-    >
-      {/* Preload all images in hidden container */}
-      <div className="hidden">
-        {media.map((item, index) => 
-          item.type === "image" && index !== currentIndex ? (
-            <img key={item.url} src={item.url} alt="" />
-          ) : null
-        )}
-      </div>
+    <>
+      <div 
+        className="relative rounded-lg overflow-hidden mb-4 bg-slate-800 touch-pan-y cursor-zoom-in"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onClick={handleMediaClick}
+      >
+        {/* Preload all images in hidden container */}
+        <div className="hidden">
+          {media.map((item, index) => 
+            item.type === "image" && index !== currentIndex ? (
+              <img key={item.url} src={item.url} alt="" />
+            ) : null
+          )}
+        </div>
 
-      {/* All media items rendered, only current one visible */}
-      <div className="relative">
-        {media.map((item, index) => (
-          <div
-            key={item.url}
-            className={`${index === currentIndex ? 'block' : 'hidden'} transition-transform duration-200 ease-out`}
-            style={{ 
-              transform: isDragging && media.length > 1 && index === currentIndex 
-                ? `translateX(${dragOffset * 0.3}px)` 
-                : 'translateX(0)',
-              opacity: isDragging && index === currentIndex ? 0.9 : 1
-            }}
-          >
-            {item.type === "video" ? (
-              <video
-                src={`${item.url}#t=0.1`}
-                controls
-                preload="metadata"
-                className="w-full h-auto"
-              />
-            ) : (
-              <img
-                src={item.url}
-                alt={`Media ${index + 1}`}
-                className="w-full h-auto select-none pointer-events-none"
-                draggable={false}
-                loading={index === 0 ? "eager" : "lazy"}
-              />
-            )}
-          </div>
-        ))}
-      </div>
+        {/* Zoom hint icon */}
+        <div className="absolute top-3 right-3 z-10 w-8 h-8 bg-black/40 rounded-full flex items-center justify-center text-white/70 pointer-events-none">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+          </svg>
+        </div>
 
-      {/* Navigation Arrows - hidden on mobile (md:flex), visible on desktop */}
-      {media.length > 1 && (
-        <>
-          <button
-            onClick={goPrev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full hidden md:flex items-center justify-center text-white transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <button
-            onClick={goNext}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full hidden md:flex items-center justify-center text-white transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </>
-      )}
+        {/* All media items rendered, only current one visible */}
+        <div className="relative">
+          {media.map((item, index) => (
+            <div
+              key={item.url}
+              className={`${index === currentIndex ? 'block' : 'hidden'} transition-transform duration-200 ease-out`}
+              style={{ 
+                transform: isDragging && media.length > 1 && index === currentIndex 
+                  ? `translateX(${dragOffset * 0.3}px)` 
+                  : 'translateX(0)',
+                opacity: isDragging && index === currentIndex ? 0.9 : 1
+              }}
+            >
+              {item.type === "video" ? (
+                <video
+                  src={`${item.url}#t=0.1`}
+                  controls
+                  preload="metadata"
+                  className="w-full h-auto"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <img
+                  src={item.url}
+                  alt={`Media ${index + 1}`}
+                  className="w-full h-auto select-none"
+                  draggable={false}
+                  loading={index === 0 ? "eager" : "lazy"}
+                />
+              )}
+            </div>
+          ))}
+        </div>
 
-      {/* Dots Indicator (only show if multiple media) */}
-      {media.length > 1 && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-          {media.map((_, index) => (
+        {/* Navigation Arrows - hidden on mobile (md:flex), visible on desktop */}
+        {media.length > 1 && (
+          <>
             <button
-              key={index}
-              onClick={() => setCurrentIndex(index)}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                index === currentIndex ? "bg-white" : "bg-white/40"
+              onClick={(e) => { e.stopPropagation(); goPrev(); }}
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full hidden md:flex items-center justify-center text-white transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); goNext(); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full hidden md:flex items-center justify-center text-white transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </>
+        )}
+
+        {/* Dots Indicator (only show if multiple media) */}
+        {media.length > 1 && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+            {media.map((_, index) => (
+              <button
+                key={index}
+                onClick={(e) => { e.stopPropagation(); setCurrentIndex(index); }}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  index === currentIndex ? "bg-white" : "bg-white/40"
               }`}
             />
           ))}
@@ -260,11 +499,22 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
 
       {/* Counter badge */}
       {media.length > 1 && (
-        <div className="absolute top-3 right-3 bg-black/60 px-2 py-1 rounded-full text-xs text-white">
+        <div className="absolute top-3 left-3 bg-black/60 px-2 py-1 rounded-full text-xs text-white">
           {currentIndex + 1} / {media.length}
         </div>
       )}
     </div>
+
+    {/* Lightbox */}
+    {showLightbox && (
+      <MediaLightbox
+        media={media}
+        currentIndex={currentIndex}
+        onClose={() => setShowLightbox(false)}
+        onNavigate={(index) => setCurrentIndex(index)}
+      />
+    )}
+    </>
   );
 }
 

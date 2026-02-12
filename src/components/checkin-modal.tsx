@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createOrUpdateCheckin } from "@/actions/checkins";
+import { createOrUpdateCheckin, checkDailyShareLimit } from "@/actions/checkins";
 import { Button } from "./ui/button";
+import { Toast } from "./ui/toast";
 import { MultiMediaUpload, MediaItem } from "./media-upload";
 import {
   ChallengeType,
@@ -60,6 +61,7 @@ export function CheckinModal({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [savedState, setSavedState] = useState<"none" | "partial" | "complete">("none");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [note, setNote] = useState(existingCheckin?.note || "");
   const [mediaUrls, setMediaUrls] = useState<MediaItem[]>(() => {
     // Support both old imageUrl and new mediaUrls
@@ -206,6 +208,8 @@ export function CheckinModal({
     const willBeComplete = forceComplete || checkGroupCompletion();
 
     startTransition(async () => {
+      setErrorMessage(null); // Clear any previous error
+      
       const result = await createOrUpdateCheckin(
         challengeId,
         today,
@@ -231,7 +235,7 @@ export function CheckinModal({
           router.refresh();
         }
       } else {
-        alert(result.error);
+        setErrorMessage(result.error || "Something went wrong");
       }
     });
   };
@@ -244,7 +248,27 @@ export function CheckinModal({
 
   const handleClose = () => {
     setSavedState("none");
+    setErrorMessage(null);
     onClose();
+  };
+
+  // Handle share toggle with daily limit check
+  const handleShareToggle = async (checked: boolean) => {
+    // If turning off, just allow it
+    if (!checked) {
+      setShareToFeed(false);
+      return;
+    }
+
+    // If turning on, check the daily limit first
+    const result = await checkDailyShareLimit(challengeId, today);
+    
+    if (!result.canShare) {
+      setErrorMessage("Daily share limit reached! You can only share 2 check-ins to the feed per day.");
+      setShareToFeed(false);
+    } else {
+      setShareToFeed(true);
+    }
   };
 
   // Check if done using group OR logic
@@ -294,21 +318,35 @@ export function CheckinModal({
   // Show success screen after saving partial progress
   if (savedState === "partial") {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <>
+        {/* Toast Popup for errors */}
+        {errorMessage && (
+          <Toast
+            message={errorMessage}
+            type="error"
+            onClose={() => setErrorMessage(null)}
+          />
+        )}
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4">
         <div
           className="absolute inset-0 bg-black/70 backdrop-blur-sm"
           onClick={handleClose}
         />
-        <div className="relative bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md overflow-hidden">
-          <div className="p-8 text-center">
+        <div className="relative bg-slate-900 border-t md:border border-slate-700 rounded-t-2xl md:rounded-2xl w-full md:max-w-md overflow-hidden">
+          {/* Mobile drag handle */}
+          <div className="md:hidden flex justify-center pt-3 pb-1">
+            <div className="w-10 h-1 bg-slate-600 rounded-full" />
+          </div>
+          
+          <div className="px-4 py-6 md:p-8 text-center">
             {/* Success Icon */}
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-blue-500/20 flex items-center justify-center">
-              <span className="text-4xl">💪</span>
+            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 md:mb-6 rounded-full bg-blue-500/20 flex items-center justify-center">
+              <span className="text-3xl md:text-4xl">💪</span>
             </div>
             
             {/* Message */}
-            <h2 className="text-2xl font-bold text-white mb-2">Progress Saved!</h2>
-            <p className="text-slate-400 mb-6">
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Progress Saved!</h2>
+            <p className="text-sm md:text-base text-slate-400 mb-4 md:mb-6">
               {hasMultipleGroups ? (
                 <>
                   Great start! Complete any one option to finish.
@@ -325,8 +363,8 @@ export function CheckinModal({
             </p>
 
             {/* Progress Summary */}
-            <div className="bg-slate-800/50 rounded-xl p-4 mb-6">
-              <div className="flex items-center justify-between text-sm mb-2">
+            <div className="bg-slate-800/50 rounded-xl p-3 md:p-4 mb-4 md:mb-6">
+              <div className="flex items-center justify-between text-xs md:text-sm mb-1.5 md:mb-2">
                 <span className="text-slate-400">Today&apos;s Progress</span>
                 <span className="text-blue-400 font-medium">
                   {hasMultipleGroups 
@@ -339,7 +377,7 @@ export function CheckinModal({
                   }
                 </span>
               </div>
-              <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+              <div className="h-2 md:h-3 bg-slate-700 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-300"
                   style={{ width: `${hasMultipleGroups 
@@ -354,76 +392,92 @@ export function CheckinModal({
             </div>
 
             {/* Share to Feed Toggle */}
-            <label className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-slate-800/50 border border-slate-700 cursor-pointer hover:bg-slate-800/70 transition-colors text-left">
-              <div className="relative">
+            <label className="flex items-center gap-2 md:gap-3 mb-4 p-2.5 md:p-3 rounded-lg bg-slate-800/50 border border-slate-700 cursor-pointer hover:bg-slate-800/70 transition-colors text-left">
+              <div className="relative flex-shrink-0">
                 <input
                   type="checkbox"
                   checked={shareToFeed}
-                  onChange={(e) => setShareToFeed(e.target.checked)}
+                  onChange={(e) => handleShareToggle(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-amber-500 transition-colors" />
-                <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5" />
+                <div className="w-10 md:w-11 h-5 md:h-6 bg-slate-700 rounded-full peer peer-checked:bg-amber-500 transition-colors" />
+                <div className="absolute left-0.5 top-0.5 w-4 md:w-5 h-4 md:h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5" />
               </div>
-              <div className="flex-1">
-                <span className="text-sm font-medium text-white">Share to Feed</span>
-                <p className="text-xs text-slate-400">
-                  {isPastDate ? "Share this past check-in update" : "Let others see your progress"}
+              <div className="flex-1 min-w-0">
+                <span className="text-xs md:text-sm font-medium text-white">Share to Feed</span>
+                <p className="text-[10px] md:text-xs text-slate-400 truncate">
+                  {isPastDate ? "Share this update" : "Let others see your progress"}
                 </p>
               </div>
-              <span className="text-lg">{shareToFeed ? "📢" : "🔒"}</span>
+              <span className="text-base md:text-lg flex-shrink-0">{shareToFeed ? "📢" : "🔒"}</span>
             </label>
 
             {/* Actions */}
-            <div className="space-y-3">
+            <div className="space-y-2 md:space-y-3">
               <Button
                 onClick={handleMarkComplete}
                 disabled={isPending}
-                className="w-full bg-emerald-500 hover:bg-emerald-600"
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-sm md:text-base py-2.5 md:py-2"
               >
                 {isPending ? (
                   "Saving..."
                 ) : (
                   <>
-                    <span className="mr-2">✓</span>
-                    I&apos;m Done - Mark as Complete
+                    <span className="mr-1 md:mr-2">✓</span>
+                    <span className="hidden sm:inline">I&apos;m Done - Mark as Complete</span>
+                    <span className="sm:hidden">Mark as Complete</span>
                   </>
                 )}
               </Button>
               <Button
                 variant="outline"
                 onClick={handleClose}
-                className="w-full"
+                className="w-full text-sm md:text-base py-2.5 md:py-2"
               >
                 Continue Later
               </Button>
             </div>
 
             {/* Tip */}
-            <p className="text-xs text-slate-500 mt-4">
+            <p className="text-[10px] md:text-xs text-slate-500 mt-3 md:mt-4">
               Tip: Completing all tasks earns you streak points!
             </p>
           </div>
         </div>
       </div>
+      </>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <>
+      {/* Toast Popup for errors */}
+      {errorMessage && (
+        <Toast
+          message={errorMessage}
+          type="error"
+          onClose={() => setErrorMessage(null)}
+        />
+      )}
+      <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4">
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={handleClose}
       />
-      <div className="relative bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="relative bg-slate-900 border-t md:border border-slate-700 rounded-t-2xl md:rounded-2xl w-full md:max-w-lg max-h-[95vh] md:max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Mobile drag handle */}
+        <div className="md:hidden flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 bg-slate-600 rounded-full" />
+        </div>
+        
         {/* Header */}
-        <div className="p-6 border-b border-slate-800">
+        <div className="px-4 py-3 md:p-6 border-b border-slate-800">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-white">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg md:text-xl font-bold text-white truncate">
                 {isPastDate ? "Update Past Check-in" : "Daily Check-in"}
               </h2>
-              <p className="text-sm text-slate-400 mt-1">
+              <p className="text-xs md:text-sm text-slate-400 mt-0.5 md:mt-1 truncate">
                 {challengeTitle}
                 {isPastDate && date && (
                   <span className="ml-2 text-amber-400">
@@ -438,7 +492,7 @@ export function CheckinModal({
             </div>
             <button
               onClick={handleClose}
-              className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800"
+              className="ml-2 p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800 flex-shrink-0"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -447,21 +501,21 @@ export function CheckinModal({
           </div>
           
           {/* Progress indicator */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-sm mb-2">
+          <div className="mt-3 md:mt-4">
+            <div className="flex items-center justify-between text-xs md:text-sm mb-1.5 md:mb-2">
               <span className="text-slate-400">Progress</span>
               {hasMultipleGroups ? (
                 <span className={allDone ? "text-emerald-400" : "text-amber-400"}>
-                  {allDone ? "✓ Complete (1 option done)" : `${groups.filter(g => getGroupCompletionStatus(g).allComplete).length} / ${groups.length} options complete`}
+                  {allDone ? "✓ Complete" : `${groups.filter(g => getGroupCompletionStatus(g).allComplete).length} / ${groups.length} options`}
                 </span>
               ) : (
                 <span className={allDone ? "text-emerald-400" : partialCount > 0 ? "text-blue-400" : "text-amber-400"}>
-                  {completedCount} / {requirements.length} complete
-                  {partialCount > 0 && !allDone && ` • ${partialCount} in progress`}
+                  {completedCount} / {requirements.length}
+                  {partialCount > 0 && !allDone && <span className="hidden sm:inline"> • {partialCount} in progress</span>}
                 </span>
               )}
             </div>
-            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+            <div className="h-1.5 md:h-2 bg-slate-800 rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-300 ${
                   allDone ? "bg-emerald-500" : "bg-amber-500"
@@ -479,7 +533,7 @@ export function CheckinModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto px-4 py-3 md:p-6 space-y-3 md:space-y-4">
           {/* Requirements - grouped by requirementGroup */}
           {groups.map((groupNum, groupIdx) => {
             const groupReqs = requirements.filter(r => (r.requirementGroup ?? 0) === groupNum);
@@ -489,9 +543,9 @@ export function CheckinModal({
               <div key={groupNum}>
                 {/* OR separator between groups */}
                 {groupIdx > 0 && (
-                  <div className="flex items-center gap-2 my-4">
+                  <div className="flex items-center gap-2 my-3 md:my-4">
                     <div className="flex-1 h-px bg-violet-500/30" />
-                    <span className="px-3 py-1 text-xs font-bold text-violet-400 bg-violet-500/20 rounded-full">
+                    <span className="px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs font-bold text-violet-400 bg-violet-500/20 rounded-full">
                       OR
                     </span>
                     <div className="flex-1 h-px bg-violet-500/30" />
@@ -499,14 +553,14 @@ export function CheckinModal({
                 )}
                 
                 {/* Group container */}
-                <div className={`space-y-3 ${hasMultipleGroups ? `p-3 rounded-xl border-2 border-dashed ${groupComplete ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-600 bg-slate-800/20'}` : ''}`}>
+                <div className={`space-y-2 md:space-y-3 ${hasMultipleGroups ? `p-2 md:p-3 rounded-xl border-2 border-dashed ${groupComplete ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-600 bg-slate-800/20'}` : ''}`}>
                   {hasMultipleGroups && (
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`text-xs font-medium px-2 py-1 rounded ${groupComplete ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'}`}>
+                    <div className="flex items-center justify-between mb-1 md:mb-2">
+                      <span className={`text-[10px] md:text-xs font-medium px-1.5 md:px-2 py-0.5 md:py-1 rounded ${groupComplete ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'}`}>
                         Option {groupIdx + 1} {groupComplete && '✓'}
                       </span>
                       {groupComplete && (
-                        <span className="text-xs text-emerald-400">Complete!</span>
+                        <span className="text-[10px] md:text-xs text-emerald-400">Complete!</span>
                       )}
                     </div>
                   )}
@@ -545,13 +599,13 @@ export function CheckinModal({
                     return (
                       <div
                         key={req.id}
-                        className={`p-4 rounded-xl border transition-all ${getBorderColor()} ${getBgColor()}`}
+                        className={`p-3 md:p-4 rounded-xl border transition-all ${getBorderColor()} ${getBgColor()}`}
                       >
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-start gap-2 md:gap-3">
                           {/* Checkbox */}
                           <button
                             onClick={() => handleToggle(req.id, req)}
-                            className={`flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${getCheckboxStyle()}`}
+                            className={`flex-shrink-0 w-7 h-7 md:w-6 md:h-6 rounded-md border-2 flex items-center justify-center transition-all ${getCheckboxStyle()}`}
                           >
                             {status === "complete" && (
                               <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -565,30 +619,31 @@ export function CheckinModal({
 
                           {/* Content */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`font-medium ${getTextColor()}`}>
+                            <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1">
+                              <span className={`text-sm md:text-base font-medium ${getTextColor()}`}>
                                 {isYesNo
                                   ? req.title || "Complete this task"
                                   : `${req.targetValue} ${challengeUnitLabels[req.unit]}`}
                               </span>
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-slate-700 text-slate-400">
+                              <span className="text-[10px] md:text-xs px-1 md:px-1.5 py-0.5 rounded bg-slate-700 text-slate-400">
                                 {challengeTypeLabels[req.type]}
                               </span>
                             </div>
                             {req.title && !isYesNo && (
-                              <p className="text-sm text-slate-400">{req.title}</p>
+                              <p className="text-xs md:text-sm text-slate-400">{req.title}</p>
                             )}
 
                             {/* Value input for non-yes_no types */}
                             {!isYesNo && (
-                              <div className="mt-3">
-                                <div className="flex items-center gap-2 mb-2">
+                              <div className="mt-2 md:mt-3">
+                                <div className="flex flex-wrap items-center gap-2 mb-2">
                                   <input
                                     type="number"
+                                    inputMode="numeric"
                                     value={item.value}
                                     onChange={(e) => handleValueChange(req.id, e.target.value, req)}
                                     placeholder="0"
-                                    className={`w-24 px-3 py-2 bg-slate-900 border rounded-lg text-white text-center focus:outline-none transition-colors ${
+                                    className={`w-20 md:w-24 px-2 md:px-3 py-2 md:py-2 bg-slate-900 border rounded-lg text-white text-center text-base focus:outline-none transition-colors ${
                                       status === "complete"
                                         ? "border-emerald-500/50 focus:border-emerald-500"
                                         : status === "partial"
@@ -596,24 +651,24 @@ export function CheckinModal({
                                         : "border-slate-700 focus:border-amber-500"
                                     }`}
                                   />
-                                  <span className="text-slate-400 text-sm">
+                                  <span className="text-slate-400 text-xs md:text-sm">
                                     / {req.targetValue} {challengeUnitLabels[req.unit]}
                                   </span>
                                   {/* Progress percentage badge */}
                                   {progress > 0 && progress < 100 && (
-                                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-medium">
+                                    <span className="text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-medium">
                                       {progress}%
                                     </span>
                                   )}
                                   {progress >= 100 && (
-                                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium">
+                                    <span className="text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium">
                                       ✓ 100%
                                     </span>
                                   )}
                                 </div>
                                 
                                 {/* Progress bar for this requirement */}
-                                <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                <div className="h-1 md:h-1.5 bg-slate-700 rounded-full overflow-hidden">
                                   <div
                                     className={`h-full transition-all duration-300 ${
                                       progress >= 100 ? "bg-emerald-500" : "bg-blue-500"
@@ -635,21 +690,21 @@ export function CheckinModal({
 
           {/* Note */}
           <div>
-            <label className="block text-sm font-medium text-slate-400 mb-2">
+            <label className="block text-xs md:text-sm font-medium text-slate-400 mb-1.5 md:mb-2">
               Notes (optional)
             </label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="How did it go today?"
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 resize-none"
-              rows={3}
+              className="w-full px-3 md:px-4 py-2 md:py-3 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm md:text-base placeholder-slate-500 focus:outline-none focus:border-amber-500 resize-none"
+              rows={2}
             />
           </div>
 
           {/* Media Upload */}
           <div>
-            <label className="block text-sm font-medium text-slate-400 mb-2">
+            <label className="block text-xs md:text-sm font-medium text-slate-400 mb-1.5 md:mb-2">
               Add Photos/Videos (optional)
             </label>
             <MultiMediaUpload
@@ -663,36 +718,36 @@ export function CheckinModal({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-slate-800 bg-slate-900/80">
+        <div className="px-4 py-3 md:p-6 border-t border-slate-800 bg-slate-900/80 safe-area-bottom">
           {/* Share to Feed Toggle */}
-          <label className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-slate-800/50 border border-slate-700 cursor-pointer hover:bg-slate-800/70 transition-colors">
-            <div className="relative">
+          <label className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4 p-2.5 md:p-3 rounded-lg bg-slate-800/50 border border-slate-700 cursor-pointer hover:bg-slate-800/70 transition-colors">
+            <div className="relative flex-shrink-0">
               <input
                 type="checkbox"
                 checked={shareToFeed}
-                onChange={(e) => setShareToFeed(e.target.checked)}
+                onChange={(e) => handleShareToggle(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-amber-500 transition-colors" />
-              <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5" />
+              <div className="w-10 md:w-11 h-5 md:h-6 bg-slate-700 rounded-full peer peer-checked:bg-amber-500 transition-colors" />
+              <div className="absolute left-0.5 top-0.5 w-4 md:w-5 h-4 md:h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5" />
             </div>
-            <div className="flex-1">
-              <span className="text-sm font-medium text-white">Share to Feed</span>
-              <p className="text-xs text-slate-400">
-                {isPastDate ? "Share this past check-in update" : "Let others see your progress"}
+            <div className="flex-1 min-w-0">
+              <span className="text-xs md:text-sm font-medium text-white">Share to Feed</span>
+              <p className="text-[10px] md:text-xs text-slate-400 truncate">
+                {isPastDate ? "Share this update" : "Let others see your progress"}
               </p>
             </div>
-            <span className="text-lg">{shareToFeed ? "📢" : "🔒"}</span>
+            <span className="text-base md:text-lg flex-shrink-0">{shareToFeed ? "📢" : "🔒"}</span>
           </label>
 
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={handleClose} className="flex-1">
+          <div className="flex gap-2 md:gap-3">
+            <Button variant="outline" onClick={handleClose} className="flex-1 text-sm md:text-base py-2.5 md:py-2">
               Cancel
             </Button>
             <Button
               onClick={() => handleSubmit(allDone, shareToFeed)}
               disabled={isPending}
-              className={`flex-1 ${
+              className={`flex-1 text-sm md:text-base py-2.5 md:py-2 ${
                 allDone
                   ? "bg-emerald-500 hover:bg-emerald-600"
                   : partialCount > 0
@@ -704,13 +759,15 @@ export function CheckinModal({
                 "Saving..."
               ) : allDone ? (
                 <>
-                  <span className="mr-2">✓</span>
-                  Complete Check-in
+                  <span className="mr-1 md:mr-2">✓</span>
+                  <span className="hidden sm:inline">Complete Check-in</span>
+                  <span className="sm:hidden">Complete</span>
                 </>
               ) : (
                 <>
-                  <span className="mr-2">💾</span>
-                  Save Progress
+                  <span className="mr-1 md:mr-2">💾</span>
+                  <span className="hidden sm:inline">Save Progress</span>
+                  <span className="sm:hidden">Save</span>
                 </>
               )}
             </Button>
@@ -718,5 +775,6 @@ export function CheckinModal({
         </div>
       </div>
     </div>
+    </>
   );
 }
