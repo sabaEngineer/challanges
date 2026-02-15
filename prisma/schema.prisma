@@ -47,6 +47,7 @@ model User {
   notificationAnalytics NotificationAnalytics[]
   sessions              UserSession[]
   visitorTracks         VisitorTrack[]
+  surveyResponses       SurveyResponse[]
 
   @@map("users")
 }
@@ -490,4 +491,42 @@ model VisitorTrack {
   @@index([visitorId])
   @@index([createdAt])
   @@map("visitor_tracks")
+}
+
+// Survey response for notification preferences feedback
+model SurveyResponse {
+  id                    String   @id @default(uuid())
+  visitorId             String   @map("visitor_id") // Can track even non-logged users
+  userId                String?  @map("user_id")
+  
+  // Q1: Notification frequency preference
+  notificationFrequency String?  @map("notification_frequency") // "yes" | "several_times" | "morning" | "evening" | "never"
+  
+  // Q2: Notification style preference
+  notificationStyle     String?  @map("notification_style") // "simple_reminder" | "friendly_character" | "aggressive" | "other"
+  notificationStyleOther String? @map("notification_style_other") @db.Text // If "other" selected
+  
+  // Q3: Best time for notifications
+  preferredTime         String?  @map("preferred_time") // "morning" | "afternoon" | "evening" | "custom"
+  customTime            String?  @map("custom_time") // If custom, specific time like "09:00"
+  
+  // Q4: What motivates you most
+  motivationType        String?  @map("motivation_type") // "streaks" | "social_pressure" | "personal_goals" | "competition" | "other"
+  
+  // Q5: How often do you want challenge reminders
+  reminderFrequency     String?  @map("reminder_frequency") // "every_challenge" | "once_daily" | "twice_daily" | "only_missed"
+  
+  // Additional feedback
+  additionalFeedback    String?  @map("additional_feedback") @db.Text
+  
+  completed             Boolean  @default(false)
+  userAgent             String?  @map("user_agent") @db.Text
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([visitorId])
+  @@index([userId])
+  @@map("survey_responses")
 }

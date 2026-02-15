@@ -21,11 +21,15 @@ export default async function AdminPage() {
     challengeCount,
     feedbackCount,
     pendingFeedbackCount,
+    surveyCount,
+    completedSurveyCount,
   ] = await Promise.all([
     db.user.count(),
     db.challenge.count(),
     db.feedback.count(),
     db.feedback.count({ where: { status: "pending" } }),
+    db.surveyResponse.count(),
+    db.surveyResponse.count({ where: { completed: true } }),
   ]);
 
   return (
@@ -136,6 +140,29 @@ export default async function AdminPage() {
                   <p className="text-sm text-slate-400">
                     User sessions, notifications & engagement
                   </p>
+                </div>
+              </div>
+            </Card>
+          </Link>
+
+          <Link href="/admin/survey">
+            <Card className="p-6 hover:border-amber-500/50 transition-colors cursor-pointer group">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center text-2xl">
+                  📋
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white group-hover:text-amber-400 transition-colors">
+                    Survey Results
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    User notification preferences feedback
+                  </p>
+                  {surveyCount > 0 && (
+                    <span className="inline-flex items-center gap-1 mt-2 text-xs px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded-full">
+                      {completedSurveyCount} completed
+                    </span>
+                  )}
                 </div>
               </div>
             </Card>
