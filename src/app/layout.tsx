@@ -3,10 +3,10 @@ import { Outfit } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { FeedbackWrapper } from "@/components/feedback-wrapper";
-import { PushNotificationPrompt } from "@/components/push-notification-prompt";
+// import { PushNotificationPrompt } from "@/components/push-notification-prompt"; // Disabled
 import { SessionTracker } from "@/components/session-tracker";
 import { VisitorTracker } from "@/components/visitor-tracker";
-import { SurveyModal } from "@/components/survey-modal";
+// import { SurveyModal } from "@/components/survey-modal"; // Disabled - enough responses collected
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -33,8 +33,8 @@ export default function RootLayout({
           {children}
         </main>
         <FeedbackWrapper />
-        <PushNotificationPrompt />
-        <SurveyModal />
+        {/* <PushNotificationPrompt /> */}
+        {/* <SurveyModal /> */}
         <SessionTracker />
         <VisitorTracker />
       </body>
