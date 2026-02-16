@@ -36,30 +36,21 @@ interface TopPerformerSlideshowProps {
 
 export function TopPerformerSlideshow({ performer, checkins, date }: TopPerformerSlideshowProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [stage, setStage] = useState<"intro" | "slideshow" | "closing">("intro");
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [stage, setStage] = useState<"intro" | "challenges" | "closing">("intro");
   const [hasSeenToday, setHasSeenToday] = useState(true);
-  const [slideDuration, setSlideDuration] = useState(2500);
+  const [visibleChallenges, setVisibleChallenges] = useState(0);
 
-  const SLIDE_DURATION_WITH_CONTENT = 2500; // 2.5 seconds for slides with media/note
-  const SLIDE_DURATION_EMPTY = 1000; // 1 second for empty slides
   const INTRO_DURATION = 2000; // 2 seconds for intro
+  const CHALLENGE_APPEAR_DELAY = 400; // 400ms between each challenge appearing
+  const FINAL_DISPLAY_DURATION = 2000; // 2 seconds after all challenges shown
 
-  // Check if a check-in has displayable content
-  const hasContent = (checkin: CheckinSlide) => {
-    const hasMedia = (checkin.mediaUrls && checkin.mediaUrls.length > 0) || checkin.imageUrl;
-    const hasNote = checkin.note && checkin.note.trim().length > 0;
-    return hasMedia || hasNote;
-  };
-
-  // Calculate duration for current slide
-  useEffect(() => {
-    if (checkins.length > 0 && currentSlide < checkins.length) {
-      const currentCheckin = checkins[currentSlide];
-      const duration = hasContent(currentCheckin) ? SLIDE_DURATION_WITH_CONTENT : SLIDE_DURATION_EMPTY;
-      setSlideDuration(duration);
+  // Get unique challenges from check-ins
+  const uniqueChallenges = checkins.reduce((acc, checkin) => {
+    if (!acc.find(c => c.id === checkin.challengeId)) {
+      acc.push({ id: checkin.challengeId, title: checkin.challengeTitle, isDone: checkin.isDone });
     }
-  }, [currentSlide, checkins]);
+    return acc;
+  }, [] as { id: string; title: string; isDone: boolean }[]);
 
   useEffect(() => {
     // Check if user has already seen this today
@@ -71,48 +62,36 @@ export function TopPerformerSlideshow({ performer, checkins, date }: TopPerforme
       setIsOpen(true);
       localStorage.setItem("topPerformerSlideshowSeen", today);
       
-      // Start with intro, then move to slideshow
-      setTimeout(() => setStage("slideshow"), INTRO_DURATION);
+      // Start with intro, then move to challenges
+      setTimeout(() => setStage("challenges"), INTRO_DURATION);
     }
   }, []);
 
-  // Auto-advance slides
+  // Animate challenges appearing one by one
   useEffect(() => {
-    if (stage !== "slideshow" || checkins.length === 0) return;
+    if (stage !== "challenges") return;
 
-    const timer = setTimeout(() => {
-      if (currentSlide >= checkins.length - 1) {
-        // Last slide finished - close immediately
+    if (visibleChallenges < uniqueChallenges.length) {
+      const timer = setTimeout(() => {
+        setVisibleChallenges(prev => prev + 1);
+      }, CHALLENGE_APPEAR_DELAY);
+      return () => clearTimeout(timer);
+    } else {
+      // All challenges shown, close after a delay
+      const timer = setTimeout(() => {
         setStage("closing");
         setTimeout(() => setIsOpen(false), 300);
-      } else {
-        setCurrentSlide((prev) => prev + 1);
-      }
-    }, slideDuration);
-
-    return () => clearTimeout(timer);
-  }, [stage, checkins.length, currentSlide, slideDuration]);
+      }, FINAL_DISPLAY_DURATION);
+      return () => clearTimeout(timer);
+    }
+  }, [stage, visibleChallenges, uniqueChallenges.length]);
 
   const handleClose = useCallback(() => {
     setStage("closing");
     setTimeout(() => setIsOpen(false), 300);
   }, []);
 
-  const handleNextSlide = useCallback(() => {
-    if (currentSlide < checkins.length - 1) {
-      setCurrentSlide((prev) => prev + 1);
-    } else {
-      handleClose();
-    }
-  }, [currentSlide, checkins.length, handleClose]);
-
-  const handlePrevSlide = useCallback(() => {
-    if (currentSlide > 0) {
-      setCurrentSlide((prev) => prev - 1);
-    }
-  }, [currentSlide]);
-
-  if (hasSeenToday || !isOpen || checkins.length === 0) {
+  if (hasSeenToday || !isOpen) {
     return null;
   }
 
@@ -124,13 +103,9 @@ export function TopPerformerSlideshow({ performer, checkins, date }: TopPerforme
     });
   };
 
-  const currentCheckin = checkins[currentSlide];
-  const mediaUrl = currentCheckin?.mediaUrls?.[0]?.url || currentCheckin?.imageUrl;
-  const mediaType = currentCheckin?.mediaUrls?.[0]?.type || "image";
-
   return (
     <div 
-      className={`fixed inset-0 z-[100] flex items-center justify-center transition-opacity duration-500 ${
+      className={`fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity duration-300 ${
         stage === "closing" ? "opacity-0" : "opacity-100"
       }`}
     >
@@ -161,7 +136,7 @@ export function TopPerformerSlideshow({ performer, checkins, date }: TopPerforme
       </div>
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-lg mx-4">
+      <div className="relative z-10 w-full max-w-md mx-4">
         {/* Intro Stage */}
         {stage === "intro" && (
           <div className="text-center animate-fade-in">
@@ -202,168 +177,100 @@ export function TopPerformerSlideshow({ performer, checkins, date }: TopPerforme
             <p className="text-slate-400 text-sm mt-2">
               {formatDate(date)}
             </p>
-            
-            <p className="text-slate-500 text-sm mt-4 animate-pulse">
-              Loading their journey...
-            </p>
           </div>
         )}
 
-        {/* Slideshow Stage */}
-        {stage === "slideshow" && currentCheckin && (
-          <div className="relative">
-            {/* Header - User info */}
-            <div className="absolute top-0 left-0 right-0 z-20 p-4 bg-gradient-to-b from-black/80 to-transparent">
+        {/* Challenges Stage - Single Card with all challenges */}
+        {stage === "challenges" && (
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 p-4 border-b border-slate-700">
               <div className="flex items-center gap-3">
                 {performer.user.avatarUrl ? (
                   <img
                     src={performer.user.avatarUrl}
                     alt={performer.user.fullName || "User"}
-                    className="w-10 h-10 rounded-full ring-2 ring-amber-500"
+                    className="w-12 h-12 rounded-full ring-2 ring-amber-500"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold ring-2 ring-amber-500/50">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-lg font-bold ring-2 ring-amber-500/50">
                     {(performer.user.fullName || "U").charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-semibold text-sm truncate">
-                    {performer.user.fullName || performer.user.username || "Anonymous"}
-                  </p>
-                  <p className="text-amber-400 text-xs">🏆 Top Performer</p>
-                </div>
-                <div className="flex items-center gap-1 text-xs px-2 py-1 bg-emerald-500/30 rounded-full text-emerald-400">
-                  ✓ {currentSlide + 1}/{checkins.length}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🏆</span>
+                    <h3 className="text-lg font-bold text-white">
+                      {performer.user.fullName || performer.user.username || "Anonymous"}
+                    </h3>
+                  </div>
+                  <p className="text-sm text-amber-400">Yesterday&apos;s Top Performer</p>
                 </div>
               </div>
+            </div>
+
+            {/* Challenges List */}
+            <div className="p-4">
+              <p className="text-slate-400 text-sm mb-3">Completed challenges:</p>
               
-              {/* Progress bar */}
-              <div className="flex gap-1 mt-3">
-                {checkins.map((_, index) => (
+              <div className="space-y-2">
+                {uniqueChallenges.map((challenge, index) => (
                   <div
-                    key={index}
-                    className="h-1 flex-1 rounded-full overflow-hidden bg-white/20"
+                    key={challenge.id}
+                    className={`transform transition-all duration-300 ${
+                      index < visibleChallenges 
+                        ? "opacity-100 translate-x-0" 
+                        : "opacity-0 -translate-x-4"
+                    }`}
                   >
-                    <div
-                      className={`h-full rounded-full transition-all duration-300 ${
-                        index < currentSlide 
-                          ? "w-full bg-amber-500" 
-                          : index === currentSlide 
-                          ? "bg-amber-500 animate-progress" 
-                          : "w-0"
-                      }`}
-                      style={index === currentSlide ? {
-                        animation: `progress ${slideDuration}ms linear forwards`
-                      } : undefined}
-                    />
+                    <Link
+                      href={`/challenges/${challenge.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-3 p-3 bg-slate-800/50 hover:bg-slate-800 rounded-xl border border-slate-700 transition-colors group"
+                    >
+                      <span className="text-lg">{index + 1}.</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-medium truncate group-hover:text-amber-400 transition-colors">
+                          {challenge.title}
+                        </p>
+                      </div>
+                      {challenge.isDone && (
+                        <span className="flex items-center gap-1 text-xs px-2 py-1 bg-emerald-500/20 rounded-full text-emerald-400">
+                          ✓
+                        </span>
+                      )}
+                    </Link>
                   </div>
                 ))}
               </div>
-            </div>
 
-            {/* Media Content */}
-            <div 
-              className="relative aspect-[4/5] bg-slate-900 rounded-2xl overflow-hidden"
-              onClick={handleNextSlide}
-            >
-              {mediaUrl ? (
-                mediaType === "video" ? (
-                  <video
-                    src={mediaUrl}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <img
-                    src={mediaUrl}
-                    alt={currentCheckin.challengeTitle}
-                    className="w-full h-full object-cover"
-                  />
-                )
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
-                  <div className="text-center p-6">
-                    <span className="text-6xl mb-4 block">
-                      {currentCheckin.isDone ? "✅" : "📝"}
-                    </span>
-                    <p className="text-white/80 text-lg">Check-in completed!</p>
-                  </div>
+              {/* Stats */}
+              <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-slate-700">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-emerald-400">✓</span>
+                  <span className="text-white font-semibold">{performer.completedCount}</span>
+                  <span className="text-slate-400">check-ins</span>
                 </div>
-              )}
-
-              {/* Navigation buttons */}
-              {currentSlide > 0 && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); handlePrevSlide(); }}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-              )}
-              
-              {currentSlide < checkins.length - 1 && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleNextSlide(); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              )}
-
-              {/* Bottom gradient with info */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
-                {/* Challenge name */}
-                <Link
-                  href={`/challenges/${currentCheckin.challengeId}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 rounded-full text-amber-400 text-sm font-medium mb-2 transition-colors"
-                >
-                  🎯 {currentCheckin.challengeTitle}
-                </Link>
-                
-                {/* Note if exists */}
-                {currentCheckin.note && (
-                  <p className="text-white text-sm line-clamp-2">
-                    {currentCheckin.note}
-                  </p>
-                )}
-                
-                {/* Status */}
-                <div className="flex items-center gap-2 mt-2">
-                  {currentCheckin.isDone ? (
-                    <span className="flex items-center gap-1 text-xs px-2 py-1 bg-emerald-500/30 rounded-full text-emerald-400">
-                      ✓ Completed
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-xs px-2 py-1 bg-blue-500/30 rounded-full text-blue-400">
-                      📝 Progress saved
-                    </span>
-                  )}
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-amber-400">🎯</span>
+                  <span className="text-white font-semibold">{uniqueChallenges.length}</span>
+                  <span className="text-slate-400">challenges</span>
                 </div>
               </div>
-            </div>
 
-            {/* Tap hint */}
-            <p className="text-center text-slate-500 text-xs mt-3">
-              Tap to continue • {currentSlide + 1} of {checkins.length}
-            </p>
+              {/* Congrats message */}
+              {visibleChallenges >= uniqueChallenges.length && (
+                <p className="text-center text-amber-400 mt-4 animate-pulse">
+                  🔥 Amazing work! Keep it up! 🔥
+                </p>
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      {/* CSS for progress animation */}
+      {/* CSS for animations */}
       <style jsx>{`
-        @keyframes progress {
-          from { width: 0%; }
-          to { width: 100%; }
-        }
         .animate-fade-in {
           animation: fadeIn 0.5s ease-out forwards;
         }

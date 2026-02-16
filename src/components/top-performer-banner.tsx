@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getYesterdayTopPerformers, awardTopPerformers, getTopPerformerCheckins } from "@/actions/top-performer";
 import { TopPerformerSlideshow } from "./top-performer-slideshow";
+import { TopPerformerModal } from "./top-performer-modal";
 
 // Small compact banner for feed
 export async function TopPerformerBanner() {
@@ -16,16 +17,25 @@ export async function TopPerformerBanner() {
   const { performers, isTie, date } = result;
   const firstPerformer = performers[0];
   
-  // Get check-ins for slideshow
-  const slideshowData = await getTopPerformerCheckins();
+  // Get check-ins for slideshow (only for single winner)
+  const slideshowData = !isTie ? await getTopPerformerCheckins() : null;
 
   return (
     <>
-      {/* Slideshow Modal (shows once per day on first visit) */}
-      {slideshowData && slideshowData.checkins.length > 0 && (
+      {/* For single winner: Show slideshow with challenge titles */}
+      {!isTie && slideshowData && slideshowData.checkins.length > 0 && (
         <TopPerformerSlideshow
           performer={slideshowData.performer}
           checkins={slideshowData.checkins}
+          date={date}
+        />
+      )}
+      
+      {/* For ties: Show old modal */}
+      {isTie && (
+        <TopPerformerModal
+          performers={performers}
+          isTie={isTie}
           date={date}
         />
       )}
