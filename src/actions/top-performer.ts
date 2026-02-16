@@ -36,6 +36,8 @@ export async function getYesterdayTopPerformers(): Promise<TopPerformersResult |
   const yesterdayStart = new Date(Date.UTC(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate()));
   const yesterdayEnd = new Date(Date.UTC(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999));
 
+  console.log("[TopPerformer] Searching for check-ins between:", yesterdayStart.toISOString(), "and", yesterdayEnd.toISOString());
+
   // Get all check-ins for yesterday based on checkinDate (the actual day of the check-in)
   const checkins = await db.dailyCheckin.findMany({
     where: {
@@ -61,6 +63,8 @@ export async function getYesterdayTopPerformers(): Promise<TopPerformersResult |
       },
     },
   });
+
+  console.log("[TopPerformer] Found", checkins.length, "check-ins for yesterday");
 
   if (checkins.length === 0) {
     return null;
@@ -224,6 +228,76 @@ export async function getUserTopPerformerHistory(userId: string) {
     orderBy: { date: "desc" },
     take: 10,
   });
+}
+
+// Get top performer's check-ins with media for slideshow
+export interface CheckinSlide {
+  id: string;
+  challengeTitle: string;
+  challengeId: string;
+  note: string | null;
+  mediaUrls: { url: string; type: "image" | "video" }[] | null;
+  imageUrl: string | null;
+  isDone: boolean;
+  createdAt: Date;
+}
+
+export async function getTopPerformerCheckins(): Promise<{
+  performer: TopPerformer;
+  checkins: CheckinSlide[];
+} | null> {
+  const result = await getYesterdayTopPerformers();
+  if (!result || result.performers.length === 0) {
+    return null;
+  }
+
+  const performer = result.performers[0];
+  
+  // Get yesterday's date range
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStart = new Date(Date.UTC(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate()));
+  const yesterdayEnd = new Date(Date.UTC(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999));
+
+  // Get all check-ins for this user from yesterday
+  const checkins = await db.dailyCheckin.findMany({
+    where: {
+      userId: performer.user.id,
+      checkinDate: {
+        gte: yesterdayStart,
+        lte: yesterdayEnd,
+      },
+    },
+    include: {
+      challenge: {
+        select: {
+          id: true,
+          title: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  const slides: CheckinSlide[] = checkins.map((checkin) => ({
+    id: checkin.id,
+    challengeTitle: checkin.challenge.title,
+    challengeId: checkin.challenge.id,
+    note: checkin.note,
+    mediaUrls: checkin.mediaUrls as { url: string; type: "image" | "video" }[] | null,
+    imageUrl: checkin.imageUrl,
+    isDone: checkin.isDone,
+    createdAt: checkin.createdAt,
+  }));
+
+  return {
+    performer,
+    checkins: slides,
+  };
 }
 
 // Get top performers for the last N days

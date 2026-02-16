@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { getYesterdayTopPerformers, awardTopPerformers } from "@/actions/top-performer";
-import { TopPerformerModal } from "./top-performer-modal";
+import { getYesterdayTopPerformers, awardTopPerformers, getTopPerformerCheckins } from "@/actions/top-performer";
+import { TopPerformerSlideshow } from "./top-performer-slideshow";
 
 // Small compact banner for feed
 export async function TopPerformerBanner() {
@@ -15,15 +15,20 @@ export async function TopPerformerBanner() {
 
   const { performers, isTie, date } = result;
   const firstPerformer = performers[0];
+  
+  // Get check-ins for slideshow
+  const slideshowData = await getTopPerformerCheckins();
 
   return (
     <>
-      {/* Modal (shows once per day on first visit) */}
-      <TopPerformerModal
-        performers={performers}
-        isTie={isTie}
-        date={date}
-      />
+      {/* Slideshow Modal (shows once per day on first visit) */}
+      {slideshowData && slideshowData.checkins.length > 0 && (
+        <TopPerformerSlideshow
+          performer={slideshowData.performer}
+          checkins={slideshowData.checkins}
+          date={date}
+        />
+      )}
       
       {/* Compact Banner */}
       <div className="mb-6">
