@@ -36,13 +36,14 @@ interface TopPerformerSlideshowProps {
 
 export function TopPerformerSlideshow({ performer, checkins, date }: TopPerformerSlideshowProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [stage, setStage] = useState<"intro" | "challenges" | "closing">("intro");
+  const [stage, setStage] = useState<"intro" | "transition" | "challenges" | "closing">("intro");
   const [hasSeenToday, setHasSeenToday] = useState(true);
   const [visibleChallenges, setVisibleChallenges] = useState(0);
 
   const INTRO_DURATION = 2000; // 2 seconds for intro
-  const CHALLENGE_APPEAR_DELAY = 400; // 400ms between each challenge appearing
-  const FINAL_DISPLAY_DURATION = 2000; // 2 seconds after all challenges shown
+  const TRANSITION_DURATION = 2500; // 2.5 seconds for "Now showing challenges" message
+  const CHALLENGE_APPEAR_DELAY = 800; // 800ms between each challenge appearing (slower)
+  const FINAL_DISPLAY_DURATION = 2500; // 2.5 seconds after all challenges shown
 
   // Get unique challenges from check-ins
   const uniqueChallenges = checkins.reduce((acc, checkin) => {
@@ -62,10 +63,18 @@ export function TopPerformerSlideshow({ performer, checkins, date }: TopPerforme
       setIsOpen(true);
       localStorage.setItem("topPerformerSlideshowSeen", today);
       
-      // Start with intro, then move to challenges
-      setTimeout(() => setStage("challenges"), INTRO_DURATION);
+      // Start with intro, then transition message, then challenges
+      setTimeout(() => setStage("transition"), INTRO_DURATION);
     }
   }, []);
+
+  // Transition to challenges after showing the message
+  useEffect(() => {
+    if (stage === "transition") {
+      const timer = setTimeout(() => setStage("challenges"), TRANSITION_DURATION);
+      return () => clearTimeout(timer);
+    }
+  }, [stage]);
 
   // Animate challenges appearing one by one
   useEffect(() => {
@@ -176,6 +185,50 @@ export function TopPerformerSlideshow({ performer, checkins, date }: TopPerforme
             
             <p className="text-slate-400 text-sm mt-2">
               {formatDate(date)}
+            </p>
+          </div>
+        )}
+
+        {/* Transition Stage - "Now showing challenges" message */}
+        {stage === "transition" && (
+          <div className="text-center animate-fade-in">
+            {/* User Avatar */}
+            <div className="mb-6">
+              {performer.user.avatarUrl ? (
+                <img
+                  src={performer.user.avatarUrl}
+                  alt={performer.user.fullName || "User"}
+                  className="w-24 h-24 mx-auto rounded-full ring-4 ring-amber-500 shadow-xl"
+                />
+              ) : (
+                <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-3xl font-bold ring-4 ring-amber-500/50">
+                  {(performer.user.fullName || "U").charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+            
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">
+              Now showing
+            </h2>
+            
+            <p className="text-2xl sm:text-3xl font-bold text-amber-400 mb-2">
+              {performer.user.fullName || performer.user.username || "User"}&apos;s
+            </p>
+            
+            <p className="text-xl text-white">
+              yesterday&apos;s completed challenges
+            </p>
+            
+            <div className="mt-6 flex justify-center">
+              <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/50 rounded-full">
+                <span className="text-amber-400">🎯</span>
+                <span className="text-white font-semibold">{uniqueChallenges.length}</span>
+                <span className="text-slate-400">challenge{uniqueChallenges.length !== 1 ? "s" : ""}</span>
+              </div>
+            </div>
+            
+            <p className="text-slate-500 text-sm mt-4 animate-pulse">
+              Loading...
             </p>
           </div>
         )}
