@@ -10,6 +10,10 @@ import {
   deleteBookComment,
   getBookComments,
   toggleBookCommentLike,
+  toggleBookReaction,
+  type ReactionType,
+  type ReactionWithUsers,
+  type ReactionUser,
 } from "@/actions/book-comments";
 import { BOOK_GENRES } from "@/lib/book-constants";
 import { Toast } from "./ui/toast";
@@ -48,12 +52,21 @@ interface BookRecommendationPostProps {
   isOwnBook: boolean;
   hasPendingRequest: boolean;
   commentCount?: number;
+  initialReactions?: ReactionWithUsers;
 }
 
 function getGenreDisplay(code: string) {
   const genre = BOOK_GENRES.find((g) => g.code === code);
   return genre || { code, label: code, emoji: "📕" };
 }
+
+const REACTIONS: { type: ReactionType; emoji: string; label: string; activeColor: string }[] = [
+  { type: "fire", emoji: "🔥", label: "Fire", activeColor: "text-amber-400" },
+  { type: "heart", emoji: "❤️", label: "Love", activeColor: "text-red-400" },
+  { type: "strong", emoji: "💪", label: "Strong", activeColor: "text-emerald-400" },
+  { type: "kudos", emoji: "👏", label: "Kudos", activeColor: "text-blue-400" },
+  { type: "not_bad", emoji: "👍", label: "Not Bad", activeColor: "text-violet-400" },
+];
 
 export function BookRecommendationPost({
   id,
@@ -69,6 +82,7 @@ export function BookRecommendationPost({
   isOwnBook,
   hasPendingRequest: initialHasPendingRequest,
   commentCount: initialCommentCount = 0,
+  initialReactions,
 }: BookRecommendationPostProps) {
   const [isPending, startTransition] = useTransition();
   const [hasPendingRequest, setHasPendingRequest] = useState(initialHasPendingRequest);
@@ -79,6 +93,16 @@ export function BookRecommendationPost({
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const descriptionRef = useRef<HTMLParagraphElement>(null);
   const [isDescriptionClamped, setIsDescriptionClamped] = useState(false);
+
+  // Reactions state
+  const [reactions, setReactions] = useState(initialReactions || {
+    counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0, heart: 0, smile: 0 },
+    userReacted: [] as ReactionType[],
+    reactors: { fire: [], strong: [], kudos: [], not_bad: [], heart: [], smile: [] } as Record<ReactionType, ReactionUser[]>,
+  });
+  const [activeReactionTooltip, setActiveReactionTooltip] = useState<ReactionType | null>(null);
+  const [showAllReactorsModal, setShowAllReactorsModal] = useState(false);
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   // Comments state
   const [showComments, setShowComments] = useState(false);
@@ -123,6 +147,24 @@ export function BookRecommendationPost({
     }
   }, [showEmojiPicker]);
 
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
+        setActiveReactionTooltip(null);
+      }
+    };
+
+    if (activeReactionTooltip) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+        document.removeEventListener("touchstart", handleClickOutside);
+      };
+    }
+  }, [activeReactionTooltip]);
+
   const insertEmoji = (emoji: string) => {
     setNewComment((prev) => prev + emoji);
     commentInputRef.current?.focus();
@@ -156,6 +198,54 @@ export function BookRecommendationPost({
       } else {
         setToastType("error");
         setToastMessage(result.error || "Failed to request book");
+      }
+    });
+  };
+
+  const handleReaction = (type: ReactionType) => {
+    const currentReaction = reactions.userReacted[0];
+    const isRemovingReaction = currentReaction === type;
+
+    // Optimistic update
+    setReactions((prev) => {
+      const newCounts = { ...prev.counts };
+
+      if (currentReaction) {
+        newCounts[currentReaction] = Math.max(0, newCounts[currentReaction] - 1);
+      }
+
+      if (!isRemovingReaction) {
+        newCounts[type] = newCounts[type] + 1;
+      }
+
+      return {
+        ...prev,
+        counts: newCounts,
+        userReacted: isRemovingReaction ? [] : [type],
+      };
+    });
+
+    startTransition(async () => {
+      const result = await toggleBookReaction(id, type);
+      if (result.error) {
+        // Revert on error
+        setReactions((prev) => {
+          const newCounts = { ...prev.counts };
+
+          if (currentReaction) {
+            newCounts[currentReaction] = newCounts[currentReaction] + 1;
+          }
+
+          if (!isRemovingReaction) {
+            newCounts[type] = Math.max(0, newCounts[type] - 1);
+          }
+
+          return {
+            ...prev,
+            counts: newCounts,
+            userReacted: currentReaction ? [currentReaction] : [],
+          };
+        });
       }
     });
   };
@@ -223,7 +313,6 @@ export function BookRecommendationPost({
   };
 
   const handleLikeComment = async (commentId: string) => {
-    // Optimistic update
     setComments((prev) =>
       prev.map((c) =>
         c.id === commentId
@@ -239,7 +328,6 @@ export function BookRecommendationPost({
     try {
       const result = await toggleBookCommentLike(commentId);
       if (result.error) {
-        // Revert on error
         setComments((prev) =>
           prev.map((c) =>
             c.id === commentId
@@ -258,6 +346,7 @@ export function BookRecommendationPost({
   };
 
   const ownerName = owner.username ? `@${owner.username}` : owner.fullName || "Someone";
+  const totalReactions = Object.values(reactions.counts).reduce((a, b) => a + b, 0);
 
   return (
     <>
@@ -334,7 +423,6 @@ export function BookRecommendationPost({
 
               {/* Tags */}
               <div className="flex flex-wrap gap-1.5 mt-2">
-                {/* Type Badge */}
                 <span
                   className={`text-xs px-2 py-0.5 rounded-full ${
                     ownershipType === "physical"
@@ -355,7 +443,6 @@ export function BookRecommendationPost({
                     : "💡 Recommendation"}
                 </span>
 
-                {/* Genre Badges */}
                 {genres.slice(0, 2).map((genreCode) => {
                   const genreInfo = getGenreDisplay(genreCode);
                   return (
@@ -369,7 +456,6 @@ export function BookRecommendationPost({
                 })}
               </div>
 
-              {/* Request Button for physical books */}
               {canRequest && (
                 <button
                   onClick={() => setShowRequestModal(true)}
@@ -421,23 +507,193 @@ export function BookRecommendationPost({
           </div>
         </div>
 
-        {/* Comment Count Summary */}
-        {commentCount > 0 && (
-          <div className="px-4 py-2 border-t border-slate-700/50 flex items-center justify-end">
-            <button
-              onClick={handleToggleComments}
-              className="text-sm text-slate-400 hover:text-slate-300 transition-colors"
-            >
-              {commentCount} comment{commentCount !== 1 ? "s" : ""}
-            </button>
+        {/* Reactions & Comments Summary */}
+        {(totalReactions > 0 || commentCount > 0) && (
+          <div className="px-4 py-2 border-t border-slate-700/50 flex items-center justify-between">
+            {totalReactions > 0 ? (
+              <button
+                onClick={() => setShowAllReactorsModal(true)}
+                className="flex items-center gap-2 hover:bg-slate-800/30 rounded-full px-2 py-1 -mx-2 transition-colors"
+              >
+                <div className="flex -space-x-1">
+                  {REACTIONS.filter((r) => reactions.counts[r.type] > 0)
+                    .slice(0, 3)
+                    .map((r) => (
+                      <span key={r.type} className="text-sm">{r.emoji}</span>
+                    ))}
+                </div>
+                <span className="text-sm text-slate-400">{totalReactions}</span>
+              </button>
+            ) : <div />}
+            {commentCount > 0 && (
+              <button
+                onClick={handleToggleComments}
+                className="text-sm text-slate-400 hover:text-slate-300 transition-colors"
+              >
+                {commentCount} comment{commentCount !== 1 ? "s" : ""}
+              </button>
+            )}
           </div>
         )}
 
-        {/* Comment Button Footer */}
-        <div className="px-4 py-2 border-t border-slate-700/50 flex items-center justify-center">
+        {/* All Reactors Modal */}
+        {showAllReactorsModal && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowAllReactorsModal(false)}
+          >
+            <div
+              className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-sm max-h-[70vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-slate-700">
+                <h3 className="text-lg font-semibold text-white">Reactions</h3>
+                <button
+                  onClick={() => setShowAllReactorsModal(false)}
+                  className="text-slate-400 hover:text-white transition-colors p-1"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="overflow-y-auto max-h-[calc(70vh-4rem)]">
+                {REACTIONS.map((reaction) => {
+                  const reactors = reactions.reactors?.[reaction.type] || [];
+                  if (reactors.length === 0) return null;
+
+                  return (
+                    <div key={reaction.type} className="border-b border-slate-800 last:border-b-0">
+                      <div className="px-4 py-2 bg-slate-800/50 flex items-center gap-2">
+                        <span className="text-lg">{reaction.emoji}</span>
+                        <span className="text-sm font-medium text-slate-300">{reaction.label}</span>
+                        <span className="text-xs text-slate-500">({reactors.length})</span>
+                      </div>
+                      <div className="divide-y divide-slate-800/50">
+                        {reactors.map((reactor) => (
+                          <Link
+                            key={reactor.id}
+                            href={`/profile/${reactor.id}`}
+                            onClick={() => setShowAllReactorsModal(false)}
+                            className="flex items-center gap-3 px-4 py-3 hover:bg-slate-800/30 transition-colors"
+                          >
+                            {reactor.avatarUrl ? (
+                              <img src={reactor.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-sm font-bold">
+                                {(reactor.fullName || "U").charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <span className="text-sm text-white">
+                              {reactor.fullName || reactor.username || "Anonymous"}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Post Footer - Reactions & Comment Button */}
+        <div className="px-0 sm:px-4 py-2 sm:py-3 border-t border-slate-700/50 flex items-center justify-between">
+          <div className="flex items-center gap-0.5 sm:gap-1">
+            {REACTIONS.map((reaction) => {
+              const isReacted = reactions.userReacted.includes(reaction.type);
+              const count = reactions.counts[reaction.type];
+              const reactors = reactions.reactors?.[reaction.type] || [];
+              const isTooltipActive = activeReactionTooltip === reaction.type;
+
+              return (
+                <div key={reaction.type} className="relative group" ref={isTooltipActive ? tooltipRef : null}>
+                  <button
+                    onClick={() => handleReaction(reaction.type)}
+                    disabled={isPending}
+                    className={`flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-full transition-all text-sm ${
+                      isReacted
+                        ? `bg-slate-700/50 ${reaction.activeColor}`
+                        : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-300"
+                    } ${isPending ? "opacity-50" : ""}`}
+                  >
+                    <span>{reaction.emoji}</span>
+                    {count > 0 && (
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (reactors.length > 0) {
+                            setActiveReactionTooltip(isTooltipActive ? null : reaction.type);
+                          }
+                        }}
+                        className="cursor-pointer hover:underline"
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Tooltip showing who reacted */}
+                  {reactors.length > 0 && (
+                    <div
+                      className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 ${
+                        isTooltipActive ? "block" : "hidden group-hover:block"
+                      }`}
+                    >
+                      <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl min-w-max max-w-[200px]">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="text-xs text-slate-400">{reaction.label}</p>
+                          {isTooltipActive && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveReactionTooltip(null);
+                              }}
+                              className="text-slate-500 hover:text-slate-300 text-xs ml-2"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          {reactors.slice(0, 5).map((reactor) => (
+                            <Link
+                              key={reactor.id}
+                              href={`/profile/${reactor.id}`}
+                              onClick={() => setActiveReactionTooltip(null)}
+                              className="flex items-center gap-2 hover:bg-slate-700/50 rounded px-1 py-0.5 -mx-1"
+                            >
+                              {reactor.avatarUrl ? (
+                                <img src={reactor.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
+                              ) : (
+                                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-[8px] font-bold">
+                                  {(reactor.fullName || "U").charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <span className="text-xs text-white truncate">
+                                {reactor.fullName || reactor.username || "Anonymous"}
+                              </span>
+                            </Link>
+                          ))}
+                          {reactors.length > 5 && (
+                            <p className="text-xs text-slate-500">+{reactors.length - 5} more</p>
+                          )}
+                        </div>
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
+                          <div className="border-8 border-transparent border-t-slate-700" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
           <button
             onClick={handleCommentClick}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-slate-400 hover:bg-slate-800/50 hover:text-slate-300 transition-all text-sm"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-slate-400 hover:bg-slate-800/50 hover:text-slate-300 transition-all text-sm"
           >
             <span>💬</span>
             <span>Comment</span>

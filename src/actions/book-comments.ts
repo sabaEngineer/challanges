@@ -5,6 +5,140 @@ import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./notifications";
 
+export type ReactionType = "fire" | "strong" | "kudos" | "not_bad" | "heart" | "smile";
+
+const REACTION_EMOJIS: Record<ReactionType, string> = {
+  fire: "🔥",
+  heart: "❤️",
+  strong: "💪",
+  kudos: "👏",
+  not_bad: "😂",
+  smile: "😊",
+};
+
+export interface ReactionUser {
+  id: string;
+  fullName: string | null;
+  username: string | null;
+  avatarUrl: string | null;
+}
+
+export interface ReactionWithUsers {
+  counts: Record<ReactionType, number>;
+  userReacted: ReactionType[];
+  reactors: Record<ReactionType, ReactionUser[]>;
+}
+
+// ============ BOOK REACTIONS ============
+
+export async function toggleBookReaction(bookId: string, type: ReactionType) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { error: "You must be logged in to react" };
+  }
+
+  try {
+    const existingReactions = await db.bookReaction.findMany({
+      where: {
+        bookId,
+        userId: user.id,
+      },
+    });
+
+    const sameTypeReaction = existingReactions.find((r) => r.type === type);
+
+    if (sameTypeReaction) {
+      await db.bookReaction.delete({
+        where: { id: sameTypeReaction.id },
+      });
+    } else {
+      if (existingReactions.length > 0) {
+        await db.bookReaction.deleteMany({
+          where: {
+            bookId,
+            userId: user.id,
+          },
+        });
+      }
+      await db.bookReaction.create({
+        data: {
+          bookId,
+          userId: user.id,
+          type,
+        },
+      });
+
+      // Send notification to book owner (if not self)
+      try {
+        const book = await db.book.findUnique({
+          where: { id: bookId },
+          select: { userId: true, title: true },
+        });
+
+        if (book && book.userId !== user.id) {
+          const reactorName = user.username ? `@${user.username}` : user.fullName || "Someone";
+          const emoji = REACTION_EMOJIS[type] || type;
+          await createNotification({
+            userId: book.userId,
+            type: "new_reaction",
+            title: `${emoji} New Reaction`,
+            message: `${reactorName} reacted ${emoji} to your book "${book.title}"`,
+            bookId,
+          });
+        }
+      } catch (notifError) {
+        console.error("Failed to send book reaction notification:", notifError);
+      }
+    }
+
+    revalidatePath("/feed");
+    return { success: true };
+  } catch (error) {
+    console.error("Error toggling book reaction:", error);
+    return { error: "Failed to update reaction" };
+  }
+}
+
+export async function getBookReactions(bookId: string) {
+  const user = await getCurrentUser();
+
+  const reactions = await db.bookReaction.findMany({
+    where: { bookId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          fullName: true,
+          username: true,
+          avatarUrl: true,
+        },
+      },
+    },
+  });
+
+  const result: ReactionWithUsers = {
+    counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0, heart: 0, smile: 0 },
+    userReacted: [],
+    reactors: { fire: [], strong: [], kudos: [], not_bad: [], heart: [], smile: [] },
+  };
+
+  reactions.forEach((r) => {
+    const type = r.type as ReactionType;
+    result.counts[type]++;
+    result.reactors[type].push(r.user);
+
+    if (user && r.user.id === user.id) {
+      if (!result.userReacted.includes(type)) {
+        result.userReacted.push(type);
+      }
+    }
+  });
+
+  return result;
+}
+
+// ============ BOOK COMMENTS ============
+
 export async function createBookComment(bookId: string, content: string) {
   const user = await getCurrentUser();
   if (!user) {

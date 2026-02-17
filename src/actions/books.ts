@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { createNotification } from "./notifications";
+import { getBookReactions } from "./book-comments";
 import type { ActionResult } from "@/lib/types";
 
 export type BookOwnershipType = "physical" | "digital" | "recommendation";
@@ -673,8 +674,7 @@ export async function getDailyBookRecommendation() {
   });
 
   if (todaysBook) {
-    // Check if current user has a pending request for this book
-    const [userPendingRequest, commentCount] = await Promise.all([
+    const [userPendingRequest, commentCount, reactions] = await Promise.all([
       db.bookLendRequest.findFirst({
         where: {
           bookId: todaysBook.id,
@@ -683,6 +683,7 @@ export async function getDailyBookRecommendation() {
         },
       }),
       db.bookComment.count({ where: { bookId: todaysBook.id } }),
+      getBookReactions(todaysBook.id),
     ]);
 
     return {
@@ -700,6 +701,7 @@ export async function getDailyBookRecommendation() {
       isOwnBook: user.id === todaysBook.userId,
       hasPendingRequest: !!userPendingRequest,
       commentCount,
+      reactions,
     };
   }
 
@@ -729,7 +731,7 @@ export async function getDailyBookRecommendation() {
     data: { feedSharedAt: new Date() },
   });
 
-  const [userPendingRequest, commentCount] = await Promise.all([
+  const [userPendingRequest, commentCount, reactions] = await Promise.all([
     db.bookLendRequest.findFirst({
       where: {
         bookId: nextBook.id,
@@ -738,6 +740,7 @@ export async function getDailyBookRecommendation() {
       },
     }),
     db.bookComment.count({ where: { bookId: nextBook.id } }),
+    getBookReactions(nextBook.id),
   ]);
 
   return {
@@ -755,6 +758,7 @@ export async function getDailyBookRecommendation() {
     isOwnBook: user.id === nextBook.userId,
     hasPendingRequest: !!userPendingRequest,
     commentCount,
+    reactions,
   };
 }
 

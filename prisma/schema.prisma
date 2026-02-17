@@ -44,6 +44,7 @@ model User {
   challengeCommentLikes ChallengeCommentLike[]
   bookComments          BookComment[]
   bookCommentLikes      BookCommentLike[]
+  bookReactions         BookReaction[]
   feedback              Feedback[]
   topPerformerAwards    TopPerformerRecord[]
   notificationAnalytics NotificationAnalytics[]
@@ -376,6 +377,7 @@ model Book {
   requests      BookLendRequest[]
   notifications Notification[]
   comments      BookComment[]
+  reactions     BookReaction[]
 
   @@map("books")
 }
@@ -421,6 +423,20 @@ model BookCommentLike {
 
   @@unique([commentId, userId])
   @@map("book_comment_likes")
+}
+
+model BookReaction {
+  id        String       @id @default(uuid())
+  bookId    String       @map("book_id")
+  userId    String       @map("user_id")
+  type      ReactionType
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, userId, type])
+  @@map("book_reactions")
 }
 
 // Feedback status

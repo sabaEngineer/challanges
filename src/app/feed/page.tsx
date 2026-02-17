@@ -77,6 +77,7 @@ export default async function FeedPage() {
             isOwnBook={dailyBook.isOwnBook}
             hasPendingRequest={dailyBook.hasPendingRequest}
             commentCount={dailyBook.commentCount}
+            initialReactions={dailyBook.reactions}
           />
         )}
 
