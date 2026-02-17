@@ -758,7 +758,7 @@ export function CheckinModal({
           {/* External Link */}
           <div>
             <label className="block text-xs md:text-sm font-medium text-slate-400 mb-1.5 md:mb-2">
-              Add Link (optional)
+              Add Strava or YouTube Link (optional)
             </label>
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
