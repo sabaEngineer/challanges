@@ -155,6 +155,35 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
     });
   }
 
+  function getNotificationLink(notification: Notification): { href: string; label: string } | null {
+    const { type, checkinId, challengeId, bookId } = notification;
+
+    // Post-related notifications: link to the post if checkinId exists
+    if (type === "new_comment" || type === "comment_reply" || type === "new_reaction") {
+      if (checkinId) return { href: `/feed/${checkinId}`, label: "View Post →" };
+      if (challengeId) return { href: `/challenges/${challengeId}`, label: "View Challenge →" };
+      return null;
+    }
+
+    // Member check-in: link to post
+    if (type === "member_checkin" && checkinId) {
+      return { href: `/feed/${checkinId}`, label: "View Post →" };
+    }
+
+    // Book notifications
+    if ((type === "book_request" || type === "book_request_accepted" || type === "book_request_rejected" || type === "book_returned") && bookId) {
+      return { href: `/books/${bookId}`, label: "View Book →" };
+    }
+
+    // Challenge invitation has its own buttons, skip auto-link
+    if (type === "challenge_invitation") return null;
+
+    // Everything else with a challengeId (new_challenge, challenge_started, etc.)
+    if (challengeId) return { href: `/challenges/${challengeId}`, label: "View Challenge →" };
+
+    return null;
+  }
+
   function getNotificationIcon(type: string) {
     switch (type) {
       case "challenge_invitation":
@@ -355,10 +384,13 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
                             </div>
                           )}
 
-                        {/* View link for reaction notifications */}
-                        {notification.type === "new_reaction" && (
+                        {/* View link */}
+                        {(() => {
+                          const link = getNotificationLink(notification);
+                          if (!link) return null;
+                          return (
                             <Link
-                              href={notification.checkinId ? `/feed/${notification.checkinId}` : `/challenges/${notification.challengeId}`}
+                              href={link.href}
                               onClick={() => {
                                 if (!notification.read) {
                                   handleMarkAsRead(notification.id);
@@ -367,87 +399,10 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
                               }}
                               className="inline-block mt-2 text-xs text-amber-400 hover:text-amber-300 transition-colors"
                             >
-                              {notification.checkinId ? "View Post →" : "View Challenge →"}
+                              {link.label}
                             </Link>
-                          )}
-
-                        {/* View link for comment notifications */}
-                        {(notification.type === "new_comment" || notification.type === "comment_reply") && (
-                            <Link
-                              href={notification.checkinId ? `/feed/${notification.checkinId}` : `/challenges/${notification.challengeId}`}
-                              onClick={() => {
-                                if (!notification.read) {
-                                  handleMarkAsRead(notification.id);
-                                }
-                                setIsOpen(false);
-                              }}
-                              className="inline-block mt-2 text-xs text-amber-400 hover:text-amber-300 transition-colors"
-                            >
-                              {notification.checkinId ? "View Post →" : "View Challenge →"}
-                            </Link>
-                          )}
-
-                        {/* View link for book notifications */}
-                        {(notification.type === "book_request" ||
-                          notification.type === "book_request_accepted" ||
-                          notification.type === "book_request_rejected" ||
-                          notification.type === "book_returned") &&
-                          notification.bookId && (
-                            <Link
-                              href={`/books/${notification.bookId}`}
-                              onClick={() => {
-                                if (!notification.read) {
-                                  handleMarkAsRead(notification.id);
-                                }
-                                setIsOpen(false);
-                              }}
-                              className="inline-block mt-2 text-xs text-amber-400 hover:text-amber-300 transition-colors"
-                            >
-                              View Book →
-                            </Link>
-                          )}
-
-                        {/* View link for member checkin notifications */}
-                        {notification.type === "member_checkin" &&
-                          notification.checkinId && (
-                            <Link
-                              href={`/feed/${notification.checkinId}`}
-                              onClick={() => {
-                                if (!notification.read) {
-                                  handleMarkAsRead(notification.id);
-                                }
-                                setIsOpen(false);
-                              }}
-                              className="inline-block mt-2 text-xs text-amber-400 hover:text-amber-300 transition-colors"
-                            >
-                              View Post →
-                            </Link>
-                          )}
-
-                        {/* View link for other notification types */}
-                        {notification.type !== "challenge_invitation" &&
-                          notification.type !== "new_comment" &&
-                          notification.type !== "comment_reply" &&
-                          notification.type !== "new_reaction" &&
-                          notification.type !== "member_checkin" &&
-                          notification.type !== "book_request" &&
-                          notification.type !== "book_request_accepted" &&
-                          notification.type !== "book_request_rejected" &&
-                          notification.type !== "book_returned" &&
-                          notification.challengeId && (
-                            <Link
-                              href={`/challenges/${notification.challengeId}`}
-                              onClick={() => {
-                                if (!notification.read) {
-                                  handleMarkAsRead(notification.id);
-                                }
-                                setIsOpen(false);
-                              }}
-                              className="inline-block mt-2 text-xs text-amber-400 hover:text-amber-300 transition-colors"
-                            >
-                              View Challenge →
-                            </Link>
-                          )}
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
