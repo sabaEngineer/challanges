@@ -140,8 +140,9 @@ model Challenge {
   id          String             @id @default(uuid())
   title       String
   description String?            @db.Text
-  imageUrl    String?            @map("image_url") @db.Text
-  startDate   DateTime           @map("start_date") @db.Date
+  imageUrl      String?            @map("image_url") @db.Text
+  imagePosition String?            @map("image_position") // CSS object-position value like "50% 30%"
+  startDate     DateTime           @map("start_date") @db.Date
   endDate     DateTime           @map("end_date") @db.Date
   frequency   ChallengeFrequency @default(daily)
   streakMode  StreakMode         @default(strict) @map("streak_mode")

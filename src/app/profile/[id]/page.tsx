@@ -62,6 +62,7 @@ async function getUserProfile(userId: string) {
           id: true,
           title: true,
           imageUrl: true,
+          imagePosition: true,
           startDate: true,
           endDate: true,
         },
@@ -293,6 +294,7 @@ export default async function UserProfilePage({ params }: PageProps) {
                         src={challenge.imageUrl}
                         alt={challenge.title}
                         className="w-12 h-12 rounded-lg object-cover"
+                        style={{ objectPosition: challenge.imagePosition || "50% 50%" }}
                       />
                     ) : (
                       <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">

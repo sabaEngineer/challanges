@@ -33,6 +33,7 @@ export async function createChallenge(
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
   const imageUrl = formData.get("imageUrl") as string;
+  const imagePosition = formData.get("imagePosition") as string;
   const startDate = formData.get("startDate") as string;
   const endDate = formData.get("endDate") as string;
   const streakMode = (formData.get("streakMode") as StreakMode) || "strict";
@@ -81,6 +82,7 @@ export async function createChallenge(
       title,
       description: description || null,
       imageUrl: imageUrl || null,
+      imagePosition: imagePosition || null,
       startDate: start,
       endDate: end,
       streakMode: streakMode as PrismaStreakMode,
@@ -191,6 +193,7 @@ export async function updateChallenge(
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
   const imageUrl = formData.get("imageUrl") as string;
+  const imagePosition = formData.get("imagePosition") as string;
 
   if (!id || !title) {
     return { success: false, error: "Please fill in all required fields" };
@@ -244,6 +247,7 @@ export async function updateChallenge(
         title,
         description: description || null,
         imageUrl: imageUrl || null,
+        imagePosition: imagePosition || null,
       },
     });
 

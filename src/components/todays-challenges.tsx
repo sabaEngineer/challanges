@@ -34,6 +34,7 @@ interface TodayChallenge {
   id: string;
   title: string;
   imageUrl?: string | null;
+  imagePosition?: string | null;
   frequency?: "daily" | "weekly" | "custom";
   requirements: Requirement[];
   membership: {
@@ -70,6 +71,7 @@ function ChallengeListItem({
               src={challenge.imageUrl}
               alt={challenge.title}
               className="w-full h-full object-cover"
+              style={{ objectPosition: challenge.imagePosition || "50% 50%" }}
             />
           ) : (
             <div className="w-full h-full bg-amber-500/20 flex items-center justify-center">
@@ -116,6 +118,7 @@ function CompletedChallengeItem({ challenge }: { challenge: TodayChallenge }) {
             src={challenge.imageUrl}
             alt={challenge.title}
             className="w-full h-full object-cover opacity-80"
+            style={{ objectPosition: challenge.imagePosition || "50% 50%" }}
           />
         ) : (
           <div className="w-full h-full bg-emerald-500/20 flex items-center justify-center text-sm">

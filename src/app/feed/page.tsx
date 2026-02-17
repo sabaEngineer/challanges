@@ -128,6 +128,7 @@ export default async function FeedPage() {
                     title={challenge.title}
                     description={challenge.description}
                     imageUrl={challenge.imageUrl}
+                    imagePosition={challenge.imagePosition}
                     startDate={challenge.startDate}
                     endDate={challenge.endDate}
                     createdAt={challenge.createdAt}

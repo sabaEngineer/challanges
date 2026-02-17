@@ -20,11 +20,18 @@ interface Creator {
   avatarUrl?: string | null;
 }
 
+function isVideoUrl(url: string) {
+  const videoExts = [".mp4", ".webm", ".mov", ".m4v", ".avi", ".3gp", ".ogg"];
+  const lower = url.toLowerCase().split("?")[0];
+  return videoExts.some((ext) => lower.endsWith(ext));
+}
+
 interface ChallengeListItemProps {
   id: string;
   title: string;
   description?: string | null;
   imageUrl?: string | null;
+  imagePosition?: string | null;
   startDate: Date;
   endDate: Date;
   creator?: Creator | null;
@@ -37,6 +44,7 @@ export function ChallengeListItem({
   title,
   description,
   imageUrl,
+  imagePosition,
   startDate,
   endDate,
   creator,
@@ -102,11 +110,20 @@ export function ChallengeListItem({
         {/* Image */}
         {imageUrl ? (
           <div className="relative h-36 overflow-hidden">
-            <img
-              src={imageUrl}
-              alt={title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
+            {isVideoUrl(imageUrl) ? (
+              <video
+                src={imageUrl}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                muted playsInline loop autoPlay
+              />
+            ) : (
+              <img
+                src={imageUrl}
+                alt={title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                style={{ objectPosition: imagePosition || "50% 50%" }}
+              />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
             {/* Status badges on image */}
             <div className="absolute top-3 left-3 flex items-center gap-2">
@@ -257,11 +274,20 @@ export function ChallengeListItem({
           {/* Thumbnail Section - Larger image */}
           <div className="relative w-56 lg:w-72 h-44 lg:h-48 flex-shrink-0">
             {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt={title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
+              isVideoUrl(imageUrl) ? (
+                <video
+                  src={imageUrl}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  muted playsInline loop autoPlay
+                />
+              ) : (
+                <img
+                  src={imageUrl}
+                  alt={title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  style={{ objectPosition: imagePosition || "50% 50%" }}
+                />
+              )
             ) : (
               <div className={`w-full h-full ${statusColors.bg} flex items-center justify-center`}>
                 <span className="text-5xl">🎯</span>

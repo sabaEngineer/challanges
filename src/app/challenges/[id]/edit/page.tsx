@@ -38,6 +38,7 @@ export default async function EditChallengePage({ params }: PageProps) {
     title: challenge.title,
     description: challenge.description,
     imageUrl: challenge.imageUrl,
+    imagePosition: challenge.imagePosition,
     startDate: challenge.startDate.toISOString().split("T")[0],
     endDate: challenge.endDate.toISOString().split("T")[0],
     requirements: challenge.requirements.map((req) => ({

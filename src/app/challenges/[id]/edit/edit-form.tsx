@@ -29,6 +29,7 @@ interface ChallengeData {
   title: string;
   description: string | null;
   imageUrl: string | null;
+  imagePosition: string | null;
   startDate: string;
   endDate: string;
   requirements: Array<{
@@ -59,6 +60,7 @@ export function EditChallengeForm({ challenge }: EditChallengeFormProps) {
     }))
   );
   const [imageUrl, setImageUrl] = useState<string | null>(challenge.imageUrl);
+  const [imagePosition, setImagePosition] = useState(challenge.imagePosition || "50% 50%");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -194,14 +196,18 @@ export function EditChallengeForm({ challenge }: EditChallengeFormProps) {
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-slate-300">
-                Cover Image <span className="text-slate-500">(optional)</span>
+                Cover Media <span className="text-slate-500">(optional)</span>
               </label>
               <ImageUpload
                 value={imageUrl || undefined}
                 onChange={(url) => setImageUrl(url)}
+                onPositionChange={(pos) => setImagePosition(pos)}
+                position={imagePosition}
                 prefix="challenges"
+                acceptVideo
               />
               <input type="hidden" name="imageUrl" value={imageUrl || ""} />
+              <input type="hidden" name="imagePosition" value={imagePosition} />
             </div>
           </div>
 

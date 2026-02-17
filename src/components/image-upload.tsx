@@ -1,34 +1,78 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { getUploadUrl } from "@/actions/media";
 
 interface ImageUploadProps {
   value?: string;
   onChange: (url: string | null) => void;
+  onPositionChange?: (position: string) => void;
+  position?: string;
   prefix?: string;
   className?: string;
+  acceptVideo?: boolean;
 }
 
-export function ImageUpload({ value, onChange, prefix = "uploads", className = "" }: ImageUploadProps) {
+function isVideoUrl(url: string) {
+  const videoExts = [".mp4", ".webm", ".mov", ".m4v", ".avi", ".3gp", ".ogg", ".mpeg"];
+  const lower = url.toLowerCase().split("?")[0];
+  return videoExts.some((ext) => lower.endsWith(ext));
+}
+
+export function ImageUpload({
+  value,
+  onChange,
+  onPositionChange,
+  position = "50% 50%",
+  prefix = "uploads",
+  className = "",
+  acceptVideo = false,
+}: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [posStart, setPosStart] = useState({ x: 50, y: 50 });
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const allowedImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+  const allowedVideoTypes = ["video/mp4", "video/webm", "video/quicktime", "video/x-m4v"];
+  const allowedTypes = acceptVideo ? [...allowedImageTypes, ...allowedVideoTypes] : allowedImageTypes;
+  const acceptString = acceptVideo
+    ? "image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime,video/x-m4v"
+    : "image/jpeg,image/png,image/gif,image/webp";
+  const maxSize = acceptVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+  const maxSizeLabel = acceptVideo ? "50MB" : "5MB";
+
+  const isVideo = value ? isVideoUrl(value) : false;
+
+  // Parse position string to x,y percentages
+  const parsePosition = useCallback((pos: string): { x: number; y: number } => {
+    const parts = pos.split(" ").map((p) => parseFloat(p));
+    return { x: parts[0] || 50, y: parts[1] || 50 };
+  }, []);
 
   const handleFile = async (file: File) => {
     if (!file) return;
 
-    // Validate file type
-    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
-      setError("Please upload a JPEG, PNG, GIF, or WebP image");
+    const isAllowed =
+      allowedTypes.includes(file.type) ||
+      file.type.startsWith("image/") ||
+      (acceptVideo && file.type.startsWith("video/"));
+
+    if (!isAllowed) {
+      setError(
+        acceptVideo
+          ? "Please upload an image or video file"
+          : "Please upload a JPEG, PNG, GIF, or WebP image"
+      );
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Image must be smaller than 5MB");
+    if (file.size > maxSize) {
+      setError(`File must be smaller than ${maxSizeLabel}`);
       return;
     }
 
@@ -36,16 +80,14 @@ export function ImageUpload({ value, onChange, prefix = "uploads", className = "
     setUploading(true);
 
     try {
-      // Get presigned URL
       const result = await getUploadUrl(file.type, prefix);
-      
+
       if (result.error) {
         setError(result.error);
         setUploading(false);
         return;
       }
 
-      // Upload to S3
       const response = await fetch(result.presignedUrl!, {
         method: "PUT",
         body: file,
@@ -59,9 +101,11 @@ export function ImageUpload({ value, onChange, prefix = "uploads", className = "
       }
 
       onChange(result.objectUrl!);
+      // Reset position for new upload
+      onPositionChange?.("50% 50%");
     } catch (err) {
       console.error("Upload error:", err);
-      setError("Failed to upload image. Please try again.");
+      setError("Failed to upload. Please try again.");
     }
 
     setUploading(false);
@@ -81,9 +125,43 @@ export function ImageUpload({ value, onChange, prefix = "uploads", className = "
 
   const handleRemove = () => {
     onChange(null);
+    onPositionChange?.("50% 50%");
     if (inputRef.current) {
       inputRef.current.value = "";
     }
+  };
+
+  // Drag to reposition image
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (isVideo) return;
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+    const currentPos = parsePosition(position);
+    setPosStart(currentPos);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging || isVideo || !containerRef.current) return;
+    e.preventDefault();
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
+
+    // Convert pixel delta to percentage (invert because we're moving the focal point)
+    const pxToPercentX = (dx / rect.width) * -100;
+    const pxToPercentY = (dy / rect.height) * -100;
+
+    const newX = Math.max(0, Math.min(100, posStart.x + pxToPercentX));
+    const newY = Math.max(0, Math.min(100, posStart.y + pxToPercentY));
+
+    onPositionChange?.(`${Math.round(newX)}% ${Math.round(newY)}%`);
+  };
+
+  const handlePointerUp = () => {
+    setIsDragging(false);
   };
 
   return (
@@ -91,33 +169,88 @@ export function ImageUpload({ value, onChange, prefix = "uploads", className = "
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp"
+        accept={acceptString}
         onChange={handleInputChange}
         className="hidden"
       />
 
       {value ? (
-        <div className="relative group">
-          <img
-            src={value}
-            alt="Uploaded"
-            className="w-full h-48 object-cover rounded-lg border border-slate-700"
-          />
-          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-white transition-colors"
-            >
-              Change
-            </button>
-            <button
-              type="button"
-              onClick={handleRemove}
-              className="px-3 py-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-sm text-white transition-colors"
-            >
-              Remove
-            </button>
+        <div className="space-y-2">
+          <div
+            ref={containerRef}
+            className={`relative group overflow-hidden rounded-lg border border-slate-700 ${
+              !isVideo ? "cursor-grab active:cursor-grabbing" : ""
+            }`}
+            style={{ height: "192px" }}
+            onPointerDown={!isVideo ? handlePointerDown : undefined}
+            onPointerMove={!isVideo ? handlePointerMove : undefined}
+            onPointerUp={!isVideo ? handlePointerUp : undefined}
+            onPointerCancel={!isVideo ? handlePointerUp : undefined}
+          >
+            {isVideo ? (
+              <video
+                src={value}
+                className="w-full h-full object-cover"
+                muted
+                playsInline
+                loop
+                autoPlay
+              />
+            ) : (
+              <img
+                src={value}
+                alt="Uploaded"
+                className="w-full h-full object-cover select-none pointer-events-none"
+                draggable={false}
+                style={{ objectPosition: position }}
+              />
+            )}
+
+            {/* Drag hint for images */}
+            {!isVideo && !isDragging && (
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center pointer-events-none">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-sm rounded-lg px-3 py-2 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                  </svg>
+                  <span className="text-white text-xs font-medium">Drag to reposition</span>
+                </div>
+              </div>
+            )}
+
+            {/* Dragging indicator */}
+            {isDragging && (
+              <div className="absolute inset-0 border-2 border-amber-500 rounded-lg pointer-events-none" />
+            )}
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-white transition-colors"
+              >
+                Change
+              </button>
+              <button
+                type="button"
+                onClick={handleRemove}
+                className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-sm text-red-400 transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+            {!isVideo && (
+              <button
+                type="button"
+                onClick={() => onPositionChange?.("50% 50%")}
+                className="px-3 py-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+              >
+                Reset position
+              </button>
+            )}
           </div>
         </div>
       ) : (
@@ -131,9 +264,10 @@ export function ImageUpload({ value, onChange, prefix = "uploads", className = "
           onDrop={handleDrop}
           className={`
             border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all
-            ${dragOver 
-              ? "border-amber-500 bg-amber-500/10" 
-              : "border-slate-700 hover:border-slate-600 hover:bg-slate-800/30"
+            ${
+              dragOver
+                ? "border-amber-500 bg-amber-500/10"
+                : "border-slate-700 hover:border-slate-600 hover:bg-slate-800/30"
             }
             ${uploading ? "opacity-50 cursor-wait" : ""}
           `}
@@ -145,17 +279,21 @@ export function ImageUpload({ value, onChange, prefix = "uploads", className = "
             </div>
           ) : (
             <>
-              <div className="text-4xl mb-2">📷</div>
-              <p className="text-slate-300 mb-1">Click or drag to upload image</p>
-              <p className="text-xs text-slate-500">JPEG, PNG, GIF, WebP (max 5MB)</p>
+              <div className="text-4xl mb-2">{acceptVideo ? "📷🎬" : "📷"}</div>
+              <p className="text-slate-300 mb-1">
+                Click or drag to upload {acceptVideo ? "image or video" : "image"}
+              </p>
+              <p className="text-xs text-slate-500">
+                {acceptVideo
+                  ? "Images (max 5MB) or Videos (max 50MB)"
+                  : "JPEG, PNG, GIF, WebP (max 5MB)"}
+              </p>
             </>
           )}
         </div>
       )}
 
-      {error && (
-        <p className="text-red-400 text-sm mt-2">{error}</p>
-      )}
+      {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
     </div>
   );
 }
@@ -185,7 +323,7 @@ export function ImageUploadCompact({ value, onChange, prefix = "uploads" }: Imag
 
     try {
       const result = await getUploadUrl(file.type, prefix);
-      
+
       if (result.error) {
         setError(result.error);
         setUploading(false);
@@ -313,7 +451,7 @@ export function AvatarUpload({ value, onChange, fallbackInitial = "U", size = "l
 
     try {
       const result = await getUploadUrl(file.type, "avatars");
-      
+
       if (result.error) {
         setError(result.error);
         setUploading(false);
@@ -397,4 +535,3 @@ export function AvatarUpload({ value, onChange, fallbackInitial = "U", size = "l
     </div>
   );
 }
-

@@ -176,6 +176,7 @@ export default async function ChallengesPage({ searchParams }: PageProps) {
                   title={challenge.title}
                   description={challenge.description}
                   imageUrl={challenge.imageUrl}
+                  imagePosition={challenge.imagePosition}
                   startDate={challenge.startDate}
                   endDate={challenge.endDate}
                   creator={challenge.creator}

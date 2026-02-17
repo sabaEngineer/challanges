@@ -53,6 +53,7 @@ export default async function DashboardPage() {
     id: c.id,
     title: c.title,
     imageUrl: c.imageUrl,
+    imagePosition: c.imagePosition,
     frequency: (c as { frequency?: string }).frequency as "daily" | "weekly" | "custom" | undefined,
     requirements: c.requirements.map((r) => ({
       id: r.id,
@@ -301,6 +302,7 @@ export default async function DashboardPage() {
                   title={challenge.title}
                   description={challenge.description}
                   imageUrl={challenge.imageUrl}
+                  imagePosition={challenge.imagePosition}
                   startDate={challenge.startDate}
                   endDate={challenge.endDate}
                   creatorUsername={challenge.creator?.username}

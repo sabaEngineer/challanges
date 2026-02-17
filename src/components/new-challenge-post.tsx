@@ -36,12 +36,19 @@ interface ReactionUser {
   avatarUrl: string | null;
 }
 
+function isVideoUrl(url: string) {
+  const videoExts = [".mp4", ".webm", ".mov", ".m4v", ".avi", ".3gp", ".ogg"];
+  const lower = url.toLowerCase().split("?")[0];
+  return videoExts.some((ext) => lower.endsWith(ext));
+}
+
 interface NewChallengePostProps {
   id: string;
   challengeId: string;
   title: string;
   description: string | null;
   imageUrl: string | null;
+  imagePosition?: string | null;
   startDate: Date;
   endDate: Date;
   createdAt: Date;
@@ -76,6 +83,7 @@ export function NewChallengePost({
   title,
   description,
   imageUrl,
+  imagePosition,
   startDate,
   endDate,
   createdAt,
@@ -397,11 +405,20 @@ export function NewChallengePost({
         {/* Image */}
         {imageUrl && (
           <div className="rounded-lg overflow-hidden mb-3 bg-slate-800">
-            <img
-              src={imageUrl}
-              alt={title}
-              className="w-full h-40 object-cover"
-            />
+            {isVideoUrl(imageUrl) ? (
+              <video
+                src={imageUrl}
+                className="w-full h-40 object-cover"
+                muted playsInline loop autoPlay
+              />
+            ) : (
+              <img
+                src={imageUrl}
+                alt={title}
+                className="w-full h-40 object-cover"
+                style={{ objectPosition: imagePosition || "50% 50%" }}
+              />
+            )}
           </div>
         )}
 

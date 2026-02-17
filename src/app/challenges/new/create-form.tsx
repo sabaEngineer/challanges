@@ -38,6 +38,7 @@ export function CreateChallengeForm() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imagePosition, setImagePosition] = useState("50% 50%");
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [createdChallenge, setCreatedChallenge] = useState<{ id: string; title: string } | null>(null);
 
@@ -156,14 +157,18 @@ export function CreateChallengeForm() {
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-slate-300">
-                Cover Image <span className="text-slate-500">(optional)</span>
+                Cover Media <span className="text-slate-500">(optional)</span>
               </label>
               <ImageUpload
                 value={imageUrl || undefined}
                 onChange={(url) => setImageUrl(url)}
+                onPositionChange={(pos) => setImagePosition(pos)}
+                position={imagePosition}
                 prefix="challenges"
+                acceptVideo
               />
               <input type="hidden" name="imageUrl" value={imageUrl || ""} />
+              <input type="hidden" name="imagePosition" value={imagePosition} />
             </div>
           </div>
 

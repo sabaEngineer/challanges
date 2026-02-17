@@ -97,6 +97,7 @@ export async function getNewChallengesForFeed(limit: number = 10) {
       title: challenge.title,
       description: challenge.description,
       imageUrl: challenge.imageUrl,
+      imagePosition: challenge.imagePosition,
       startDate: challenge.startDate,
       endDate: challenge.endDate,
       createdAt: challenge.createdAt,
