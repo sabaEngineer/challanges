@@ -106,6 +106,10 @@ export function NotificationsList({ initialNotifications }: NotificationsListPro
         return "↩️";
       case "member_checkin":
         return "✓";
+      case "new_reaction":
+        return "😍";
+      case "new_challenge":
+        return "🆕";
       case "book_request":
         return "📚";
       case "book_request_accepted":
@@ -299,6 +303,22 @@ export function NotificationsList({ initialNotifications }: NotificationsListPro
                       </div>
                     )}
 
+                  {/* View link for reaction notifications */}
+                  {notification.type === "new_reaction" &&
+                    notification.checkinId && (
+                    <Link
+                      href={`/feed/${notification.checkinId}`}
+                      onClick={() => {
+                        if (!notification.read) {
+                          handleMarkAsRead(notification.id);
+                        }
+                      }}
+                      className="inline-block mt-3 text-sm text-amber-400 hover:text-amber-300 transition-colors"
+                    >
+                      View Post →
+                    </Link>
+                  )}
+
                   {/* View link for comment notifications */}
                   {(notification.type === "new_comment" || notification.type === "comment_reply") && 
                     notification.checkinId && (
@@ -354,6 +374,7 @@ export function NotificationsList({ initialNotifications }: NotificationsListPro
                   {notification.type !== "challenge_invitation" &&
                     notification.type !== "new_comment" &&
                     notification.type !== "comment_reply" &&
+                    notification.type !== "new_reaction" &&
                     notification.type !== "member_checkin" &&
                     notification.type !== "book_request" &&
                     notification.type !== "book_request_accepted" &&

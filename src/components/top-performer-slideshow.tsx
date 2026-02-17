@@ -235,9 +235,9 @@ export function TopPerformerSlideshow({ performer, checkins, date }: TopPerforme
 
         {/* Challenges Stage - Single Card with all challenges */}
         {stage === "challenges" && (
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 p-4 border-b border-slate-700">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl max-h-[80vh] flex flex-col">
+            {/* Header - always visible */}
+            <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 p-4 border-b border-slate-700 shrink-0">
               <div className="flex items-center gap-3">
                 {performer.user.avatarUrl ? (
                   <img
@@ -262,8 +262,8 @@ export function TopPerformerSlideshow({ performer, checkins, date }: TopPerforme
               </div>
             </div>
 
-            {/* Challenges List */}
-            <div className="p-4">
+            {/* Scrollable Challenges List */}
+            <div className="p-4 overflow-y-auto flex-1 min-h-0">
               <p className="text-slate-400 text-sm mb-3">Completed challenges:</p>
               
               <div className="space-y-2">
@@ -296,9 +296,12 @@ export function TopPerformerSlideshow({ performer, checkins, date }: TopPerforme
                   </div>
                 ))}
               </div>
+            </div>
 
+            {/* Footer - always visible */}
+            <div className="p-4 pt-0 shrink-0 border-t border-slate-700">
               {/* Stats */}
-              <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-slate-700">
+              <div className="flex items-center justify-center gap-4 py-3">
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-emerald-400">✓</span>
                   <span className="text-white font-semibold">{performer.completedCount}</span>
@@ -313,7 +316,7 @@ export function TopPerformerSlideshow({ performer, checkins, date }: TopPerforme
 
               {/* Congrats message */}
               {visibleChallenges >= uniqueChallenges.length && (
-                <p className="text-center text-amber-400 mt-4 animate-pulse">
+                <p className="text-center text-amber-400 animate-pulse">
                   🔥 Amazing work! Keep it up! 🔥
                 </p>
               )}

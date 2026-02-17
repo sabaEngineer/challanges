@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import type { ActionResult, Challenge, ChallengeType, ChallengeUnit, StreakMode } from "@/lib/types";
 import { ChallengeType as PrismaChallengeType, ChallengeUnit as PrismaChallengeUnit, StreakMode as PrismaStreakMode } from "@prisma/client";
+import { createNotification } from "./notifications";
 
 interface RequirementInput {
   title: string;
@@ -105,6 +106,28 @@ export async function createChallenge(
       requirements: true,
     },
   });
+
+  // Notify all other users about the new challenge
+  try {
+    const creatorName = user.username ? `@${user.username}` : user.fullName || "Someone";
+    const allUsers = await db.user.findMany({
+      where: { id: { not: user.id } },
+      select: { id: true },
+    });
+
+    const notifications = allUsers.map((u) =>
+      createNotification({
+        userId: u.id,
+        type: "new_challenge",
+        title: "New Challenge Created!",
+        message: `${creatorName} created a new challenge: "${title}"`,
+        challengeId: challenge.id,
+      })
+    );
+    await Promise.all(notifications);
+  } catch (notifError) {
+    console.error("Failed to send new challenge notifications:", notifError);
+  }
 
   revalidatePath("/challenges");
   

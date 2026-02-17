@@ -23,6 +23,7 @@ export type ChallengeUnit =
   | "calories"
   | "liters"
   | "workouts"
+  | "meals"
   | "lari"
   | "none";
 
@@ -68,7 +69,9 @@ export type NotificationType =
   | "invitation_accepted"
   | "invitation_rejected"
   | "challenge_started"
-  | "challenge_ended";
+  | "challenge_ended"
+  | "new_reaction"
+  | "new_challenge";
 
 export interface Notification {
   id: string;
@@ -129,6 +132,7 @@ export const challengeUnitLabels: Record<ChallengeUnit, string> = {
   calories: "Calories",
   liters: "Liters",
   workouts: "Workouts",
+  meals: "Meals",
   lari: "Lari (₾)",
   none: "None",
 };
@@ -137,6 +141,6 @@ export const challengeUnitLabels: Record<ChallengeUnit, string> = {
 export const unitsForType: Record<ChallengeType, ChallengeUnit[]> = {
   distance: ["km", "meters", "steps"],
   time: ["minutes", "hours"],
-  count: ["reps", "pages", "calories", "liters", "workouts", "lari"],
+  count: ["reps", "pages", "calories", "liters", "workouts", "meals", "lari"],
   yes_no: ["none"],
 };

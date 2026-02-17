@@ -3,8 +3,18 @@
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { createNotification } from "./notifications";
 
 export type ReactionType = "fire" | "strong" | "kudos" | "not_bad" | "heart" | "smile";
+
+const REACTION_EMOJIS: Record<ReactionType, string> = {
+  fire: "🔥",
+  heart: "❤️",
+  strong: "💪",
+  kudos: "👏",
+  not_bad: "😂",
+  smile: "😊",
+};
 
 export async function toggleReaction(checkinId: string, type: ReactionType) {
   const user = await getCurrentUser();
@@ -47,6 +57,32 @@ export async function toggleReaction(checkinId: string, type: ReactionType) {
           type,
         },
       });
+
+      // Send notification to post owner (if it's not the same user)
+      try {
+        const checkin = await db.dailyCheckin.findUnique({
+          where: { id: checkinId },
+          select: {
+            userId: true,
+            challengeId: true,
+          },
+        });
+
+        if (checkin && checkin.userId !== user.id) {
+          const reactorName = user.username ? `@${user.username}` : user.fullName || "Someone";
+          const emoji = REACTION_EMOJIS[type] || type;
+          await createNotification({
+            userId: checkin.userId,
+            type: "new_reaction",
+            title: `${emoji} New Reaction`,
+            message: `${reactorName} reacted ${emoji} to your post`,
+            challengeId: checkin.challengeId,
+            checkinId,
+          });
+        }
+      } catch (notifError) {
+        console.error("Failed to send reaction notification:", notifError);
+      }
     }
 
     revalidatePath("/feed");

@@ -338,12 +338,10 @@ export async function createOrUpdateCheckin(
     console.log("Updating streak...");
     const newStreak = await updateStreak(challengeId, user.id);
     
-    // Send notifications only when completing a check-in (not on edits)
-    if (allDone) {
-      console.log("All done! Sending notifications...");
-      // Send notifications to other active members
-      await notifyChallengeMembersOfCheckin(challengeId, checkin.id, user.id, user.fullName || user.username || "Someone", challenge.title);
-    }
+    // Member check-in notifications disabled - too noisy for users
+    // if (allDone) {
+    //   await notifyChallengeMembersOfCheckin(challengeId, checkin.id, user.id, user.fullName || user.username || "Someone", challenge.title);
+    // }
 
     console.log("Check-in complete! Revalidating paths...");
     revalidatePath(`/challenges/${challengeId}`);

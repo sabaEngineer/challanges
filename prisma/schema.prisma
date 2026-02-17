@@ -72,6 +72,7 @@ enum ChallengeUnit {
   calories // nutrition challenges
   liters   // water intake
   workouts // gym session count
+  meals    // meal count for nutrition challenges
   lari     // Georgian currency for savings challenges
   none     // for yes_no challenges
 
@@ -103,6 +104,8 @@ enum NotificationType {
   member_checkin
   new_comment
   comment_reply
+  new_reaction
+  new_challenge
   book_request
   book_request_accepted
   book_request_rejected

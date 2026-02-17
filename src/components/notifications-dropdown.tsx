@@ -173,6 +173,10 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
         return "↩️";
       case "member_checkin":
         return "✓";
+      case "new_reaction":
+        return "😍";
+      case "new_challenge":
+        return "🆕";
       case "book_request":
         return "📚";
       case "book_request_accepted":
@@ -351,6 +355,23 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
                             </div>
                           )}
 
+                        {/* View link for reaction notifications */}
+                        {notification.type === "new_reaction" &&
+                          notification.checkinId && (
+                            <Link
+                              href={`/feed/${notification.checkinId}`}
+                              onClick={() => {
+                                if (!notification.read) {
+                                  handleMarkAsRead(notification.id);
+                                }
+                                setIsOpen(false);
+                              }}
+                              className="inline-block mt-2 text-xs text-amber-400 hover:text-amber-300 transition-colors"
+                            >
+                              View Post →
+                            </Link>
+                          )}
+
                         {/* View link for comment notifications */}
                         {(notification.type === "new_comment" || notification.type === "comment_reply") &&
                           notification.checkinId && (
@@ -409,6 +430,7 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
                         {notification.type !== "challenge_invitation" &&
                           notification.type !== "new_comment" &&
                           notification.type !== "comment_reply" &&
+                          notification.type !== "new_reaction" &&
                           notification.type !== "member_checkin" &&
                           notification.type !== "book_request" &&
                           notification.type !== "book_request_accepted" &&

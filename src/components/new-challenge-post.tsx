@@ -93,6 +93,20 @@ export function NewChallengePost({
     reactors: { fire: [], strong: [], kudos: [], not_bad: [], heart: [], smile: [] } as Record<ReactionType, ReactionUser[]>,
   });
 
+  // Description expand state
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const descriptionRef = useRef<HTMLParagraphElement>(null);
+  const [isDescriptionClamped, setIsDescriptionClamped] = useState(false);
+
+  // Check if description is actually clamped (overflows 2 lines)
+  useEffect(() => {
+    if (descriptionRef.current) {
+      setIsDescriptionClamped(
+        descriptionRef.current.scrollHeight > descriptionRef.current.clientHeight
+      );
+    }
+  }, [description]);
+
   // Comments state
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -400,7 +414,22 @@ export function NewChallengePost({
 
         {/* Description */}
         {description && (
-          <p className="text-slate-400 text-sm line-clamp-2 mb-3">{description}</p>
+          <div className="mb-3">
+            <p
+              ref={descriptionRef}
+              className={`text-slate-400 text-sm ${!isDescriptionExpanded ? "line-clamp-2" : ""}`}
+            >
+              {description}
+            </p>
+            {(isDescriptionClamped || isDescriptionExpanded) && (
+              <button
+                onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                className="text-amber-400 hover:text-amber-300 text-sm font-medium mt-1 transition-colors"
+              >
+                {isDescriptionExpanded ? "See less" : "See more"}
+              </button>
+            )}
+          </div>
         )}
 
         {/* Stats Row */}
