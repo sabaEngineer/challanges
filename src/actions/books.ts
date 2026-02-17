@@ -674,13 +674,16 @@ export async function getDailyBookRecommendation() {
 
   if (todaysBook) {
     // Check if current user has a pending request for this book
-    const userPendingRequest = await db.bookLendRequest.findFirst({
-      where: {
-        bookId: todaysBook.id,
-        requesterId: user.id,
-        status: "pending",
-      },
-    });
+    const [userPendingRequest, commentCount] = await Promise.all([
+      db.bookLendRequest.findFirst({
+        where: {
+          bookId: todaysBook.id,
+          requesterId: user.id,
+          status: "pending",
+        },
+      }),
+      db.bookComment.count({ where: { bookId: todaysBook.id } }),
+    ]);
 
     return {
       id: todaysBook.id,
@@ -696,6 +699,7 @@ export async function getDailyBookRecommendation() {
       owner: todaysBook.owner,
       isOwnBook: user.id === todaysBook.userId,
       hasPendingRequest: !!userPendingRequest,
+      commentCount,
     };
   }
 
@@ -725,13 +729,16 @@ export async function getDailyBookRecommendation() {
     data: { feedSharedAt: new Date() },
   });
 
-  const userPendingRequest = await db.bookLendRequest.findFirst({
-    where: {
-      bookId: nextBook.id,
-      requesterId: user.id,
-      status: "pending",
-    },
-  });
+  const [userPendingRequest, commentCount] = await Promise.all([
+    db.bookLendRequest.findFirst({
+      where: {
+        bookId: nextBook.id,
+        requesterId: user.id,
+        status: "pending",
+      },
+    }),
+    db.bookComment.count({ where: { bookId: nextBook.id } }),
+  ]);
 
   return {
     id: nextBook.id,
@@ -747,6 +754,7 @@ export async function getDailyBookRecommendation() {
     owner: nextBook.owner,
     isOwnBook: user.id === nextBook.userId,
     hasPendingRequest: !!userPendingRequest,
+    commentCount,
   };
 }
 

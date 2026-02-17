@@ -76,6 +76,7 @@ export default async function FeedPage() {
             owner={dailyBook.owner}
             isOwnBook={dailyBook.isOwnBook}
             hasPendingRequest={dailyBook.hasPendingRequest}
+            commentCount={dailyBook.commentCount}
           />
         )}
 
