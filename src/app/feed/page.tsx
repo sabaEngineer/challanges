@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getFeedPosts, getNewChallengesForFeed } from "@/actions/feed";
+import { getDailyBookRecommendation } from "@/actions/books";
 import { FeedPost } from "@/components/feed-post";
 import { NewChallengePost } from "@/components/new-challenge-post";
+import { BookRecommendationPost } from "@/components/book-recommendation-post";
 import { TopPerformerBanner } from "@/components/top-performer-banner";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
@@ -14,9 +16,10 @@ export default async function FeedPage() {
     redirect("/login");
   }
 
-  const [feedPosts, newChallenges] = await Promise.all([
+  const [feedPosts, newChallenges, dailyBook] = await Promise.all([
     getFeedPosts(30),
     getNewChallengesForFeed(10),
+    getDailyBookRecommendation(),
   ]);
 
   // Combine and sort all feed items by date
@@ -75,49 +78,90 @@ export default async function FeedPage() {
           </Card>
         ) : (
           <div className="space-y-6">
-            {feedItems.map((item) => {
-              if (item.type === "checkin") {
-                const post = item.data;
-                return (
-                  <FeedPost
-                    key={post.id}
-                    id={post.id}
-                    user={post.user}
-                    challenge={post.challenge}
-                    checkinDate={post.checkinDate}
-                    note={post.note}
-                    imageUrl={post.imageUrl}
-                    mediaUrls={post.mediaUrls}
-                    createdAt={post.createdAt}
-                    items={post.items}
-                    isOwnPost={post.isOwnPost}
-                    initialReactions={post.reactions}
-                    initialCommentCount={post.commentCount}
-                  />
-                );
-              } else {
-                const challenge = item.data;
-                return (
-                  <NewChallengePost
-                    key={challenge.id}
-                    id={challenge.id}
-                    challengeId={challenge.challengeId}
-                    title={challenge.title}
-                    description={challenge.description}
-                    imageUrl={challenge.imageUrl}
-                    startDate={challenge.startDate}
-                    endDate={challenge.endDate}
-                    createdAt={challenge.createdAt}
-                    creator={challenge.creator}
-                    memberCount={challenge.memberCount}
-                    commentCount={challenge.commentCount}
-                    requirements={challenge.requirements}
-                    isOwnChallenge={challenge.isOwnChallenge}
-                    initialReactions={challenge.reactions}
-                  />
-                );
-              }
+            {feedItems.map((item, index) => {
+              // Insert daily book recommendation after the 3rd item
+              const showBookAfter = index === Math.min(2, feedItems.length - 1);
+
+              return (
+                <div key={item.type === "checkin" ? item.data.id : (item.data as typeof newChallenges[0]).id}>
+                  {item.type === "checkin" ? (() => {
+                    const post = item.data;
+                    return (
+                      <FeedPost
+                        id={post.id}
+                        user={post.user}
+                        challenge={post.challenge}
+                        checkinDate={post.checkinDate}
+                        note={post.note}
+                        imageUrl={post.imageUrl}
+                        mediaUrls={post.mediaUrls}
+                        createdAt={post.createdAt}
+                        items={post.items}
+                        isOwnPost={post.isOwnPost}
+                        initialReactions={post.reactions}
+                        initialCommentCount={post.commentCount}
+                      />
+                    );
+                  })() : (() => {
+                    const challenge = item.data as typeof newChallenges[0];
+                    return (
+                      <NewChallengePost
+                        id={challenge.id}
+                        challengeId={challenge.challengeId}
+                        title={challenge.title}
+                        description={challenge.description}
+                        imageUrl={challenge.imageUrl}
+                        startDate={challenge.startDate}
+                        endDate={challenge.endDate}
+                        createdAt={challenge.createdAt}
+                        creator={challenge.creator}
+                        memberCount={challenge.memberCount}
+                        commentCount={challenge.commentCount}
+                        requirements={challenge.requirements}
+                        isOwnChallenge={challenge.isOwnChallenge}
+                        initialReactions={challenge.reactions}
+                      />
+                    );
+                  })()}
+
+                  {showBookAfter && dailyBook && (
+                    <div className="mt-6">
+                      <BookRecommendationPost
+                        id={dailyBook.id}
+                        title={dailyBook.title}
+                        author={dailyBook.author}
+                        description={dailyBook.description}
+                        coverUrl={dailyBook.coverUrl}
+                        ownershipType={dailyBook.ownershipType}
+                        language={dailyBook.language}
+                        genres={dailyBook.genres}
+                        isLent={dailyBook.isLent}
+                        owner={dailyBook.owner}
+                        isOwnBook={dailyBook.isOwnBook}
+                        hasPendingRequest={dailyBook.hasPendingRequest}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
             })}
+            {/* If there are fewer than 3 items but we have a book, show it at the end */}
+            {feedItems.length < 3 && feedItems.length > 0 && dailyBook && feedItems.length <= 2 && (
+              <BookRecommendationPost
+                id={dailyBook.id}
+                title={dailyBook.title}
+                author={dailyBook.author}
+                description={dailyBook.description}
+                coverUrl={dailyBook.coverUrl}
+                ownershipType={dailyBook.ownershipType}
+                language={dailyBook.language}
+                genres={dailyBook.genres}
+                isLent={dailyBook.isLent}
+                owner={dailyBook.owner}
+                isOwnBook={dailyBook.isOwnBook}
+                hasPendingRequest={dailyBook.hasPendingRequest}
+              />
+            )}
           </div>
         )}
       </div>

@@ -365,6 +365,7 @@ model Book {
   userId        String            @map("user_id")
   lentToUserId  String?           @map("lent_to_user_id")
   lentAt        DateTime?         @map("lent_at")
+  feedSharedAt  DateTime?         @map("feed_shared_at") // When this book was shown as daily recommendation in feed
   createdAt     DateTime          @default(now()) @map("created_at")
   updatedAt     DateTime          @default(now()) @updatedAt @map("updated_at")
 

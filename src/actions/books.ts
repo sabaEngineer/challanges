@@ -645,6 +645,111 @@ export async function getUserForBookList(userId: string) {
   return user;
 }
 
+// Get the daily book recommendation for the feed
+// Picks one book that hasn't been shared to feed yet. If all have been shared, returns null.
+// The same book is shown for the entire day (based on feedSharedAt date).
+export async function getDailyBookRecommendation() {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  // Check if we already have a book shared today
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+
+  const todaysBook = await db.book.findFirst({
+    where: {
+      feedSharedAt: { gte: todayStart },
+    },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          fullName: true,
+          username: true,
+          avatarUrl: true,
+        },
+      },
+    },
+  });
+
+  if (todaysBook) {
+    // Check if current user has a pending request for this book
+    const userPendingRequest = await db.bookLendRequest.findFirst({
+      where: {
+        bookId: todaysBook.id,
+        requesterId: user.id,
+        status: "pending",
+      },
+    });
+
+    return {
+      id: todaysBook.id,
+      title: todaysBook.title,
+      author: todaysBook.author,
+      description: todaysBook.description,
+      coverUrl: todaysBook.coverUrl,
+      ownershipType: todaysBook.ownershipType,
+      language: todaysBook.language,
+      genres: todaysBook.genres,
+      isLent: !!todaysBook.lentToUserId,
+      feedSharedAt: todaysBook.feedSharedAt!,
+      owner: todaysBook.owner,
+      isOwnBook: user.id === todaysBook.userId,
+      hasPendingRequest: !!userPendingRequest,
+    };
+  }
+
+  // No book shared today yet - pick the next unshared book
+  const nextBook = await db.book.findFirst({
+    where: {
+      feedSharedAt: null,
+    },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          fullName: true,
+          username: true,
+          avatarUrl: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" }, // Share oldest first
+  });
+
+  if (!nextBook) return null; // All books have been shared
+
+  // Mark this book as shared today
+  await db.book.update({
+    where: { id: nextBook.id },
+    data: { feedSharedAt: new Date() },
+  });
+
+  const userPendingRequest = await db.bookLendRequest.findFirst({
+    where: {
+      bookId: nextBook.id,
+      requesterId: user.id,
+      status: "pending",
+    },
+  });
+
+  return {
+    id: nextBook.id,
+    title: nextBook.title,
+    author: nextBook.author,
+    description: nextBook.description,
+    coverUrl: nextBook.coverUrl,
+    ownershipType: nextBook.ownershipType,
+    language: nextBook.language,
+    genres: nextBook.genres,
+    isLent: !!nextBook.lentToUserId,
+    feedSharedAt: new Date(),
+    owner: nextBook.owner,
+    isOwnBook: user.id === nextBook.userId,
+    hasPendingRequest: !!userPendingRequest,
+  };
+}
+
 // Get user's books for their profile
 export async function getUserBooksForProfile(userId: string) {
   const books = await db.book.findMany({
