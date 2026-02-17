@@ -356,10 +356,9 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
                           )}
 
                         {/* View link for reaction notifications */}
-                        {notification.type === "new_reaction" &&
-                          notification.checkinId && (
+                        {notification.type === "new_reaction" && (
                             <Link
-                              href={`/feed/${notification.checkinId}`}
+                              href={notification.checkinId ? `/feed/${notification.checkinId}` : `/challenges/${notification.challengeId}`}
                               onClick={() => {
                                 if (!notification.read) {
                                   handleMarkAsRead(notification.id);
@@ -368,15 +367,14 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
                               }}
                               className="inline-block mt-2 text-xs text-amber-400 hover:text-amber-300 transition-colors"
                             >
-                              View Post →
+                              {notification.checkinId ? "View Post →" : "View Challenge →"}
                             </Link>
                           )}
 
                         {/* View link for comment notifications */}
-                        {(notification.type === "new_comment" || notification.type === "comment_reply") &&
-                          notification.checkinId && (
+                        {(notification.type === "new_comment" || notification.type === "comment_reply") && (
                             <Link
-                              href={`/feed/${notification.checkinId}`}
+                              href={notification.checkinId ? `/feed/${notification.checkinId}` : `/challenges/${notification.challengeId}`}
                               onClick={() => {
                                 if (!notification.read) {
                                   handleMarkAsRead(notification.id);
@@ -385,7 +383,7 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
                               }}
                               className="inline-block mt-2 text-xs text-amber-400 hover:text-amber-300 transition-colors"
                             >
-                              View Post →
+                              {notification.checkinId ? "View Post →" : "View Challenge →"}
                             </Link>
                           )}
 

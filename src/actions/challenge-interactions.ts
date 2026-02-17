@@ -7,6 +7,15 @@ import { createNotification } from "./notifications";
 
 export type ReactionType = "fire" | "strong" | "kudos" | "not_bad" | "heart" | "smile";
 
+const REACTION_EMOJIS: Record<ReactionType, string> = {
+  fire: "🔥",
+  heart: "❤️",
+  strong: "💪",
+  kudos: "👏",
+  not_bad: "😂",
+  smile: "😊",
+};
+
 // ============ CHALLENGE REACTIONS ============
 
 export async function toggleChallengeReaction(challengeId: string, type: ReactionType) {
@@ -50,6 +59,28 @@ export async function toggleChallengeReaction(challengeId: string, type: Reactio
           type,
         },
       });
+
+      // Send notification to challenge creator (if it's not the same user)
+      try {
+        const challenge = await db.challenge.findUnique({
+          where: { id: challengeId },
+          select: { createdBy: true, title: true },
+        });
+
+        if (challenge && challenge.createdBy !== user.id) {
+          const reactorName = user.username ? `@${user.username}` : user.fullName || "Someone";
+          const emoji = REACTION_EMOJIS[type] || type;
+          await createNotification({
+            userId: challenge.createdBy,
+            type: "new_reaction",
+            title: `${emoji} New Reaction`,
+            message: `${reactorName} reacted ${emoji} to your challenge "${challenge.title}"`,
+            challengeId,
+          });
+        }
+      } catch (notifError) {
+        console.error("Failed to send challenge reaction notification:", notifError);
+      }
     }
 
     revalidatePath("/feed");
@@ -206,17 +237,64 @@ export async function createChallengeComment(challengeId: string, content: strin
       },
     });
 
-    // Notify the challenge creator if it's not the commenter
+    // Get all users who have commented on this challenge (except current user)
+    const existingCommenters = await db.challengeComment.findMany({
+      where: {
+        challengeId,
+        userId: { not: user.id },
+      },
+      select: { userId: true },
+      distinct: ["userId"],
+    });
+
+    const commenterName = user.username ? `@${user.username}` : user.fullName || "Someone";
+    const creatorName = challenge.creator.username ? `@${challenge.creator.username}` : challenge.creator.fullName || "Someone";
+
+    const usersToNotify = new Set<string>();
+
+    // 1. Notify the challenge creator if it's not the commenter
     if (challenge.createdBy !== user.id) {
-      const commenterName = user.username ? `@${user.username}` : user.fullName || "Someone";
-      await createNotification({
-        userId: challenge.createdBy,
-        type: "new_comment",
-        title: "New Comment on Challenge",
-        message: `${commenterName} commented on your challenge "${challenge.title}": "${content.slice(0, 50)}${content.length > 50 ? "..." : ""}"`,
-        challengeId: challenge.id,
-      });
+      usersToNotify.add(challenge.createdBy);
     }
+
+    // 2. Notify other commenters (excluding creator who was already added, and current user)
+    existingCommenters.forEach((commenter) => {
+      if (commenter.userId !== challenge.createdBy) {
+        usersToNotify.add(commenter.userId);
+      }
+    });
+
+    // Send notifications
+    const notificationPromises = [];
+
+    // Notification to challenge creator
+    if (usersToNotify.has(challenge.createdBy)) {
+      notificationPromises.push(
+        createNotification({
+          userId: challenge.createdBy,
+          type: "new_comment",
+          title: "New Comment on Challenge",
+          message: `${commenterName} commented on your challenge "${challenge.title}": "${content.slice(0, 50)}${content.length > 50 ? "..." : ""}"`,
+          challengeId: challenge.id,
+        })
+      );
+      usersToNotify.delete(challenge.createdBy);
+    }
+
+    // Notifications to other commenters
+    for (const userId of usersToNotify) {
+      notificationPromises.push(
+        createNotification({
+          userId,
+          type: "comment_reply",
+          title: "New Reply on Challenge",
+          message: `${commenterName} also commented on ${creatorName}'s challenge "${challenge.title}": "${content.slice(0, 50)}${content.length > 50 ? "..." : ""}"`,
+          challengeId: challenge.id,
+        })
+      );
+    }
+
+    await Promise.all(notificationPromises);
 
     revalidatePath("/feed");
     return { 
@@ -355,6 +433,32 @@ export async function toggleChallengeCommentLike(commentId: string) {
           userId: user.id,
         },
       });
+
+      // Notify the comment owner
+      try {
+        const comment = await db.challengeComment.findUnique({
+          where: { id: commentId },
+          select: {
+            userId: true,
+            content: true,
+            challengeId: true,
+          },
+        });
+
+        if (comment && comment.userId !== user.id) {
+          const likerName = user.username ? `@${user.username}` : user.fullName || "Someone";
+          await createNotification({
+            userId: comment.userId,
+            type: "new_reaction",
+            title: "❤️ Comment Liked",
+            message: `${likerName} liked your comment: "${comment.content.slice(0, 50)}${comment.content.length > 50 ? "..." : ""}"`,
+            challengeId: comment.challengeId,
+          });
+        }
+      } catch (notifError) {
+        console.error("Failed to send challenge comment like notification:", notifError);
+      }
+
       revalidatePath("/feed");
       return { success: true, liked: true };
     }

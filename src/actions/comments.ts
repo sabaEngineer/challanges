@@ -318,6 +318,36 @@ export async function toggleCommentLike(commentId: string) {
           userId: user.id,
         },
       });
+
+      // Notify the comment owner
+      try {
+        const comment = await db.postComment.findUnique({
+          where: { id: commentId },
+          select: {
+            userId: true,
+            content: true,
+            checkinId: true,
+            checkin: {
+              select: { challengeId: true },
+            },
+          },
+        });
+
+        if (comment && comment.userId !== user.id) {
+          const likerName = user.username ? `@${user.username}` : user.fullName || "Someone";
+          await createNotification({
+            userId: comment.userId,
+            type: "new_reaction",
+            title: "❤️ Comment Liked",
+            message: `${likerName} liked your comment: "${comment.content.slice(0, 50)}${comment.content.length > 50 ? "..." : ""}"`,
+            challengeId: comment.checkin.challengeId,
+            checkinId: comment.checkinId,
+          });
+        }
+      } catch (notifError) {
+        console.error("Failed to send comment like notification:", notifError);
+      }
+
       revalidatePath("/feed");
       return { success: true, liked: true };
     }
