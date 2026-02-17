@@ -45,6 +45,8 @@ export default async function PostPage({ params }: PostPageProps) {
           checkinDate={post.checkinDate}
           note={post.note}
           imageUrl={post.imageUrl}
+          mediaUrls={post.mediaUrls}
+          linkUrl={post.linkUrl}
           createdAt={post.createdAt}
           items={post.items}
           isOwnPost={post.isOwnPost}

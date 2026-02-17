@@ -222,6 +222,7 @@ model DailyCheckin {
   note         String?  @db.Text
   imageUrl     String?  @map("image_url") @db.Text
   mediaUrls    Json?    @map("media_urls") // Array of { url: string, type: "image" | "video" }
+  linkUrl      String?  @map("link_url") @db.Text // External URL (YouTube, Strava, etc.)
   isDone       Boolean  @default(false) @map("is_done")
   sharedToFeed Boolean  @default(false) @map("shared_to_feed")
   createdAt    DateTime @default(now()) @map("created_at")

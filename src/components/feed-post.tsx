@@ -56,6 +56,7 @@ interface FeedPostProps {
   note: string | null;
   imageUrl: string | null;
   mediaUrls?: MediaItem[] | null;
+  linkUrl?: string | null;
   createdAt: Date;
   items: {
     id: string;
@@ -76,6 +77,128 @@ interface FeedPostProps {
     reactors?: Record<ReactionType, ReactionUser[]>;
   };
   initialCommentCount?: number;
+}
+
+function getYouTubeVideoId(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.includes("youtu.be")) {
+      return parsed.pathname.slice(1).split("/")[0] || null;
+    }
+    if (parsed.hostname.includes("youtube.com")) {
+      if (parsed.pathname.startsWith("/shorts/")) {
+        return parsed.pathname.split("/shorts/")[1]?.split("/")[0] || null;
+      }
+      return parsed.searchParams.get("v");
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function getStravaActivityId(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname.includes("strava.com")) return null;
+    const match = parsed.pathname.match(/\/activities\/(\d+)/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+function StravaEmbed({ activityId, url }: { activityId: string; url: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Create the placeholder div that the Strava script expects
+    const placeholder = document.createElement("div");
+    placeholder.className = "strava-embed-placeholder";
+    placeholder.dataset.embedType = "activity";
+    placeholder.dataset.embedId = activityId;
+    placeholder.dataset.style = "standard";
+    containerRef.current.innerHTML = "";
+    containerRef.current.appendChild(placeholder);
+
+    // Load the Strava embed script
+    const existingScript = document.querySelector('script[src="https://strava-embeds.com/embed.js"]');
+    if (existingScript) {
+      // Script already exists, re-trigger it by removing and re-adding
+      existingScript.remove();
+    }
+    const script = document.createElement("script");
+    script.src = "https://strava-embeds.com/embed.js";
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
+    };
+  }, [activityId]);
+
+  return (
+    <div className="mb-4">
+      <div ref={containerRef} className="rounded-xl overflow-hidden" />
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg text-sm text-orange-400 hover:text-orange-300 hover:bg-slate-800/50 transition-colors"
+      >
+        <span>🏃</span>
+        <span>View on Strava</span>
+        <svg className="w-3.5 h-3.5 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+      </a>
+    </div>
+  );
+}
+
+function ExternalLinkEmbed({ url }: { url: string }) {
+  const youtubeId = getYouTubeVideoId(url);
+  const stravaId = getStravaActivityId(url);
+
+  if (youtubeId) {
+    return (
+      <div className="mb-4 rounded-xl overflow-hidden bg-black">
+        <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+          <iframe
+            src={`https://www.youtube.com/embed/${youtubeId}`}
+            title="YouTube video"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="absolute inset-0 w-full h-full"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (stravaId) {
+    return <StravaEmbed activityId={stravaId} url={url} />;
+  }
+
+  // Fallback: plain link card
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 mb-4 px-4 py-3 rounded-xl border border-slate-700 bg-slate-800/50 hover:bg-slate-800 transition-colors group"
+    >
+      <span className="text-lg">🔗</span>
+      <span className="text-sm text-slate-300 group-hover:text-white truncate flex-1">{url}</span>
+      <svg className="w-4 h-4 text-slate-500 group-hover:text-slate-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+      </svg>
+    </a>
+  );
 }
 
 const REACTIONS: { type: ReactionType; emoji: string; label: string; activeColor: string }[] = [
@@ -531,6 +654,7 @@ export function FeedPost({
   note, 
   imageUrl, 
   mediaUrls,
+  linkUrl,
   createdAt, 
   items,
   isOwnPost,
@@ -953,6 +1077,9 @@ export function FeedPost({
 
         {/* Media Gallery */}
         <MediaGallery mediaUrls={mediaUrls} imageUrl={imageUrl} />
+
+        {/* External Link Embed */}
+        {linkUrl && <ExternalLinkEmbed url={linkUrl} />}
       </div>
 
       {/* Reactions & Comments Summary */}

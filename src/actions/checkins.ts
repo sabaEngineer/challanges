@@ -71,7 +71,8 @@ export async function createOrUpdateCheckin(
   items: CheckinItemInput[],
   note?: string,
   mediaUrls?: MediaItem[],
-  sharedToFeed?: boolean
+  sharedToFeed?: boolean,
+  linkUrl?: string
 ): Promise<ActionResult> {
   console.log("createOrUpdateCheckin called with:", { challengeId, date, itemsCount: items.length });
   
@@ -292,6 +293,7 @@ export async function createOrUpdateCheckin(
         note: note || null,
         imageUrl: firstImageUrl,
         mediaUrls: mediaUrls && mediaUrls.length > 0 ? (mediaUrls as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
+        linkUrl: linkUrl || null,
         isDone: allDone,
         sharedToFeed: sharedToFeed ?? false,
       },
@@ -299,6 +301,7 @@ export async function createOrUpdateCheckin(
         note: note || null,
         imageUrl: firstImageUrl,
         mediaUrls: mediaUrls && mediaUrls.length > 0 ? (mediaUrls as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
+        linkUrl: linkUrl || null,
         isDone: allDone,
         ...(sharedToFeed !== undefined && { sharedToFeed }),
       },
@@ -590,6 +593,7 @@ export async function getPastCheckins(challengeId: string) {
       note: c.note,
       imageUrl: c.imageUrl,
       mediaUrls: c.mediaUrls as { url: string; type: "image" | "video" }[] | null,
+      linkUrl: c.linkUrl,
       items: c.items.map((item) => ({
         requirementId: item.requirementId,
         value: item.value?.toString() || null,

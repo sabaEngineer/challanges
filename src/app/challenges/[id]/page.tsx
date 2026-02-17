@@ -153,6 +153,7 @@ export default async function ChallengePage({ params }: PageProps) {
     ? {
         note: todayCheckin.note,
         imageUrl: todayCheckin.imageUrl,
+        linkUrl: todayCheckin.linkUrl,
         isDone: todayCheckin.isDone,
         items: todayCheckin.items.map((item) => ({
           requirementId: item.requirementId,

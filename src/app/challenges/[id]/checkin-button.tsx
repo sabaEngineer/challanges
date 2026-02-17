@@ -23,6 +23,7 @@ interface CheckinItem {
 interface TodayCheckin {
   note?: string | null;
   imageUrl?: string | null;
+  linkUrl?: string | null;
   isDone: boolean;
   items: {
     requirementId: string;
@@ -103,6 +104,7 @@ export function CheckinButton({
           existingCheckin={todayCheckin ? {
             note: todayCheckin.note,
             imageUrl: todayCheckin.imageUrl,
+            linkUrl: todayCheckin.linkUrl,
             items: todayCheckin.items,
           } : null}
           onStreakUpdate={handleStreakUpdate}
@@ -180,6 +182,7 @@ export function CheckinButton({
         existingCheckin={todayCheckin ? {
           note: todayCheckin.note,
           imageUrl: todayCheckin.imageUrl,
+          linkUrl: todayCheckin.linkUrl,
           items: todayCheckin.items,
         } : null}
         onStreakUpdate={handleStreakUpdate}

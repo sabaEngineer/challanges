@@ -186,6 +186,7 @@ export async function getFeedPosts(limit: number = 20, offset: number = 0) {
     note: checkin.note,
     imageUrl: checkin.imageUrl,
     mediaUrls: checkin.mediaUrls as { url: string; type: "image" | "video" }[] | null,
+    linkUrl: checkin.linkUrl,
     createdAt: checkin.createdAt,
     isDone: checkin.isDone, // Whether all requirements are completed
     items: checkin.items.map((item) => ({
@@ -551,6 +552,8 @@ export async function getSinglePost(postId: string) {
     checkinDate: checkin.checkinDate,
     note: checkin.note,
     imageUrl: checkin.imageUrl,
+    mediaUrls: checkin.mediaUrls as { url: string; type: "image" | "video" }[] | null,
+    linkUrl: checkin.linkUrl,
     createdAt: checkin.createdAt,
     isDone: checkin.isDone,
     items: checkin.items.map((item) => ({

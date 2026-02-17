@@ -23,6 +23,7 @@ interface PastCheckin {
   note?: string | null;
   imageUrl?: string | null;
   mediaUrls?: { url: string; type: "image" | "video" }[] | null;
+  linkUrl?: string | null;
   items: {
     requirementId: string;
     value?: string | null;
@@ -248,6 +249,7 @@ export function PastCheckinsSection({
             note: selectedCheckin.note,
             imageUrl: selectedCheckin.imageUrl,
             mediaUrls: selectedCheckin.mediaUrls,
+            linkUrl: selectedCheckin.linkUrl,
             items: selectedCheckin.items,
           } : null}
           date={selectedDate}

@@ -13,6 +13,34 @@ import {
   challengeUnitLabels,
 } from "@/lib/types";
 
+function isValidLinkUrl(url: string): boolean {
+  if (!url.trim()) return true;
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    return (
+      host.includes("youtube.com") ||
+      host.includes("youtu.be") ||
+      host.includes("strava.com")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function getLinkType(url: string): "youtube" | "strava" | null {
+  if (!url.trim()) return null;
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if (host.includes("youtube.com") || host.includes("youtu.be")) return "youtube";
+    if (host.includes("strava.com")) return "strava";
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 interface Requirement {
   id: string;
   title?: string | null;
@@ -32,6 +60,7 @@ interface ExistingCheckin {
   note?: string | null;
   imageUrl?: string | null;
   mediaUrls?: MediaItem[] | null;
+  linkUrl?: string | null;
   items: CheckinItem[];
 }
 
@@ -77,6 +106,8 @@ export function CheckinModal({
     }
     return [];
   });
+  const [linkUrl, setLinkUrl] = useState(existingCheckin?.linkUrl || "");
+  const [linkError, setLinkError] = useState<string | null>(null);
   const [shareToFeed, setShareToFeed] = useState(false);
   const [items, setItems] = useState<Record<string, { value: string; isDone: boolean }>>(() => {
     const initial: Record<string, { value: string; isDone: boolean }> = {};
@@ -182,6 +213,13 @@ export function CheckinModal({
   };
 
   const handleSubmit = (forceComplete = false, shouldShareToFeed = false) => {
+    // Validate link URL before submitting
+    if (linkUrl.trim() && !isValidLinkUrl(linkUrl)) {
+      setLinkError("Please enter a valid YouTube or Strava URL");
+      return;
+    }
+    setLinkError(null);
+
     const checkinItems = requirements.map((req) => {
       const item = items[req.id];
       const numValue = item.value ? parseFloat(item.value) : undefined;
@@ -216,7 +254,8 @@ export function CheckinModal({
         checkinItems,
         note || undefined,
         mediaUrls.length > 0 ? mediaUrls : undefined,
-        shouldShareToFeed
+        shouldShareToFeed,
+        linkUrl.trim() || undefined
       );
 
       if (result.success) {
@@ -714,6 +753,43 @@ export function CheckinModal({
               maxFiles={10}
               maxVideoSize={100}
             />
+          </div>
+
+          {/* External Link */}
+          <div>
+            <label className="block text-xs md:text-sm font-medium text-slate-400 mb-1.5 md:mb-2">
+              Add Link (optional)
+            </label>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                🔗
+              </div>
+              <input
+                type="url"
+                value={linkUrl}
+                onChange={(e) => {
+                  setLinkUrl(e.target.value);
+                  setLinkError(null);
+                }}
+                placeholder="YouTube or Strava URL..."
+                className={`w-full pl-9 pr-3 md:pr-4 py-2 md:py-3 bg-slate-800 border rounded-xl text-white text-sm md:text-base placeholder-slate-500 focus:outline-none transition-colors ${
+                  linkError ? "border-red-500 focus:border-red-500" : "border-slate-700 focus:border-amber-500"
+                }`}
+              />
+            </div>
+            {linkError && (
+              <p className="text-xs text-red-400 mt-1">{linkError}</p>
+            )}
+            {linkUrl.trim() && !linkError && getLinkType(linkUrl) && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <span className="text-xs">
+                  {getLinkType(linkUrl) === "youtube" ? "▶️" : "🏃"}
+                </span>
+                <span className="text-xs text-slate-400">
+                  {getLinkType(linkUrl) === "youtube" ? "YouTube video" : "Strava activity"} will be embedded in your post
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
