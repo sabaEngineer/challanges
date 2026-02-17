@@ -25,7 +25,8 @@ export default async function FeedPage() {
   // Combine and sort all feed items by date
   type FeedItem = 
     | { type: "checkin"; data: typeof feedPosts[0]; sortDate: Date }
-    | { type: "new_challenge"; data: typeof newChallenges[0]; sortDate: Date };
+    | { type: "new_challenge"; data: typeof newChallenges[0]; sortDate: Date }
+    | { type: "book_recommendation"; data: NonNullable<typeof dailyBook>; sortDate: Date };
 
   const feedItems: FeedItem[] = [
     ...feedPosts.map((post) => ({
@@ -38,6 +39,13 @@ export default async function FeedPage() {
       data: challenge,
       sortDate: new Date(challenge.createdAt),
     })),
+    ...(dailyBook
+      ? [{
+          type: "book_recommendation" as const,
+          data: dailyBook,
+          sortDate: new Date(dailyBook.feedSharedAt),
+        }]
+      : []),
   ];
 
   // Sort by date descending
@@ -61,28 +69,8 @@ export default async function FeedPage() {
         {/* Top Performer Banner */}
         <TopPerformerBanner />
 
-        {/* Daily Book Recommendation - shown at the top */}
-        {dailyBook && (
-          <BookRecommendationPost
-            id={dailyBook.id}
-            title={dailyBook.title}
-            author={dailyBook.author}
-            description={dailyBook.description}
-            coverUrl={dailyBook.coverUrl}
-            ownershipType={dailyBook.ownershipType}
-            language={dailyBook.language}
-            genres={dailyBook.genres}
-            isLent={dailyBook.isLent}
-            owner={dailyBook.owner}
-            isOwnBook={dailyBook.isOwnBook}
-            hasPendingRequest={dailyBook.hasPendingRequest}
-            commentCount={dailyBook.commentCount}
-            initialReactions={dailyBook.reactions}
-          />
-        )}
-
         {/* Feed */}
-        {!hasContent && !dailyBook ? (
+        {!hasContent ? (
           <Card className="text-center py-16">
             <div className="text-6xl mb-4">📭</div>
             <h3 className="text-xl font-semibold text-white mb-2">No activity yet</h3>
@@ -118,7 +106,7 @@ export default async function FeedPage() {
                     initialCommentCount={post.commentCount}
                   />
                 );
-              } else {
+              } else if (item.type === "new_challenge") {
                 const challenge = item.data as typeof newChallenges[0];
                 return (
                   <NewChallengePost
@@ -138,6 +126,27 @@ export default async function FeedPage() {
                     requirements={challenge.requirements}
                     isOwnChallenge={challenge.isOwnChallenge}
                     initialReactions={challenge.reactions}
+                  />
+                );
+              } else {
+                const book = item.data as NonNullable<typeof dailyBook>;
+                return (
+                  <BookRecommendationPost
+                    key={`book-${book.id}`}
+                    id={book.id}
+                    title={book.title}
+                    author={book.author}
+                    description={book.description}
+                    coverUrl={book.coverUrl}
+                    ownershipType={book.ownershipType}
+                    language={book.language}
+                    genres={book.genres}
+                    isLent={book.isLent}
+                    owner={book.owner}
+                    isOwnBook={book.isOwnBook}
+                    hasPendingRequest={book.hasPendingRequest}
+                    commentCount={book.commentCount}
+                    initialReactions={book.reactions}
                   />
                 );
               }
