@@ -753,6 +753,11 @@ export function FeedPost({
   const [activeReactionTooltip, setActiveReactionTooltip] = useState<ReactionType | null>(null);
   const [showAllReactorsModal, setShowAllReactorsModal] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
+
+  // Share menu state
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
   
   // Common emojis for quick access
   const EMOJI_LIST = [
@@ -778,6 +783,23 @@ export function FeedPost({
       };
     }
   }, [showEmojiPicker]);
+
+  // Close share menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (shareMenuRef.current && !shareMenuRef.current.contains(event.target as Node)) {
+        setShowShareMenu(false);
+      }
+    };
+    if (showShareMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+        document.removeEventListener("touchstart", handleClickOutside);
+      };
+    }
+  }, [showShareMenu]);
   
   const insertEmoji = (emoji: string) => {
     setNewComment(prev => prev + emoji);
@@ -904,6 +926,61 @@ export function FeedPost({
       await loadComments();
     }
     setShowComments(!showComments);
+  };
+
+  const postUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/feed/${id}`
+    : `/feed/${id}`;
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(postUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement("textarea");
+      textarea.value = postUrl;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
+    setShowShareMenu(false);
+  };
+
+  const handleShareMessenger = () => {
+    const messengerUrl = `https://www.facebook.com/dialog/send?link=${encodeURIComponent(postUrl)}&app_id=291494419107518&redirect_uri=${encodeURIComponent(postUrl)}`;
+    window.open(messengerUrl, "_blank", "width=600,height=500");
+    setShowShareMenu(false);
+  };
+
+  const handleShareInstagram = async () => {
+    try {
+      await navigator.clipboard.writeText(postUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      // ignore
+    }
+    setShowShareMenu(false);
+  };
+
+  const handleNativeShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${user.fullName || user.username}'s check-in`,
+          text: note || `Check-in for ${challenge.title}`,
+          url: postUrl,
+        });
+      } catch {
+        // User cancelled or error
+      }
+      setShowShareMenu(false);
+    }
   };
 
   const handleCommentClick = async () => {
@@ -1346,13 +1423,77 @@ export function FeedPost({
             );
           })}
         </div>
-        <button
-          onClick={handleCommentClick}
-          className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-slate-400 hover:bg-slate-800/50 hover:text-slate-300 transition-all text-sm"
-        >
-          <span>💬</span>
-          <span>Comment</span>
-        </button>
+        <div className="flex items-center gap-0.5 sm:gap-1">
+          <button
+            onClick={handleCommentClick}
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-slate-400 hover:bg-slate-800/50 hover:text-slate-300 transition-all text-sm"
+          >
+            <span>💬</span>
+            <span>Comment</span>
+          </button>
+
+          {/* Share Button */}
+          <div className="relative" ref={shareMenuRef}>
+            <button
+              onClick={() => setShowShareMenu(!showShareMenu)}
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-slate-400 hover:bg-slate-800/50 hover:text-slate-300 transition-all text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              <span className="hidden sm:inline">Share</span>
+            </button>
+
+            {showShareMenu && (
+              <div className="absolute bottom-full right-0 mb-2 z-50 w-56 bg-slate-800 border border-slate-700 rounded-xl shadow-xl overflow-hidden">
+                {/* Native share (mobile) */}
+                {typeof navigator !== "undefined" && "share" in navigator && (
+                  <button
+                    onClick={handleNativeShare}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700/50 transition-colors text-left"
+                  >
+                    <span className="text-lg">📤</span>
+                    <span className="text-sm text-slate-200">Share via...</span>
+                  </button>
+                )}
+
+                {/* Messenger */}
+                <button
+                  onClick={handleShareMessenger}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700/50 transition-colors text-left"
+                >
+                  <span className="text-lg">💬</span>
+                  <div>
+                    <span className="text-sm text-slate-200">Messenger</span>
+                  </div>
+                </button>
+
+                {/* Instagram */}
+                <button
+                  onClick={handleShareInstagram}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700/50 transition-colors text-left"
+                >
+                  <span className="text-lg">📸</span>
+                  <div>
+                    <span className="text-sm text-slate-200">Instagram</span>
+                    <p className="text-[10px] text-slate-500">Copies link to paste in DM or Story</p>
+                  </div>
+                </button>
+
+                {/* Copy Link */}
+                <button
+                  onClick={handleCopyLink}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700/50 transition-colors text-left border-t border-slate-700/50"
+                >
+                  <span className="text-lg">{copiedLink ? "✅" : "🔗"}</span>
+                  <span className="text-sm text-slate-200">
+                    {copiedLink ? "Link Copied!" : "Copy Link"}
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Comments Section */}
