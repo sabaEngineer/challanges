@@ -151,7 +151,7 @@ function StravaEmbed({ activityId, url }: { activityId: string; url: string }) {
   }, [activityId]);
 
   return (
-    <div className="mb-4">
+    <div>
       <div ref={containerRef} className="rounded-xl overflow-hidden" />
       <a
         href={url}
@@ -187,7 +187,7 @@ function StravaAppLinkEmbed({ url }: { url: string }) {
 
   if (loading) {
     return (
-      <div className="mb-4 rounded-xl border border-slate-700 bg-slate-800/50 p-4 flex items-center gap-3">
+      <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 flex items-center gap-3">
         <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
         <span className="text-sm text-slate-400">Loading Strava activity...</span>
       </div>
@@ -208,7 +208,7 @@ function StravaLinkCard({ url }: { url: string }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-3 mb-4 px-4 py-3 rounded-xl border border-orange-500/30 bg-orange-500/5 hover:bg-orange-500/10 transition-colors group"
+      className="flex items-center gap-3 px-4 py-3 rounded-xl border border-orange-500/30 bg-orange-500/5 hover:bg-orange-500/10 transition-colors group"
     >
       <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center flex-shrink-0">
         <span className="text-xl">🏃</span>
@@ -230,7 +230,7 @@ function ExternalLinkEmbed({ url }: { url: string }) {
 
   if (youtubeId) {
     return (
-      <div className="mb-4 rounded-xl overflow-hidden bg-black">
+      <div className="rounded-xl overflow-hidden bg-black">
         <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
           <iframe
             src={`https://www.youtube.com/embed/${youtubeId}`}
@@ -258,7 +258,7 @@ function ExternalLinkEmbed({ url }: { url: string }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2 mb-4 px-4 py-3 rounded-xl border border-slate-700 bg-slate-800/50 hover:bg-slate-800 transition-colors group"
+      className="flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-700 bg-slate-800/50 hover:bg-slate-800 transition-colors group"
     >
       <span className="text-lg">🔗</span>
       <span className="text-sm text-slate-300 group-hover:text-white truncate flex-1">{url}</span>
@@ -504,8 +504,13 @@ function MediaLightbox({
   );
 }
 
+// Slide type: either an uploaded media item or an external link embed
+type GallerySlide =
+  | { kind: "media"; item: MediaItem }
+  | { kind: "embed"; url: string };
+
 // Media Gallery Component with swipe support for mobile and preloading
-function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null; imageUrl: string | null }) {
+function MediaGallery({ mediaUrls, imageUrl, linkUrl }: { mediaUrls?: MediaItem[] | null; imageUrl: string | null; linkUrl?: string | null }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -515,7 +520,7 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
   const [showLightbox, setShowLightbox] = useState(false);
   
   // Build media array from mediaUrls or fallback to imageUrl
-  const media: MediaItem[] = (() => {
+  const uploadedMedia: MediaItem[] = (() => {
     if (mediaUrls && Array.isArray(mediaUrls) && mediaUrls.length > 0) {
       return mediaUrls;
     }
@@ -529,11 +534,20 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
     return [];
   })();
 
+  // Build combined slides: external embed first, then uploaded media
+  const slides: GallerySlide[] = [
+    ...(linkUrl ? [{ kind: "embed" as const, url: linkUrl }] : []),
+    ...uploadedMedia.map((item) => ({ kind: "media" as const, item })),
+  ];
+
+  // Media-only items for the lightbox (embeds can't be lightboxed)
+  const lightboxMedia = uploadedMedia;
+
   // Preload all images on mount
   useEffect(() => {
-    if (media.length <= 1) return;
+    if (uploadedMedia.length <= 1) return;
     
-    media.forEach((item, index) => {
+    uploadedMedia.forEach((item, index) => {
       if (item.type === "image") {
         const img = new Image();
         img.src = item.url;
@@ -542,19 +556,19 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
         };
       }
     });
-  }, [media]);
+  }, [uploadedMedia]);
 
-  if (media.length === 0) return null;
+  if (slides.length === 0) return null;
 
-  const goNext = () => setCurrentIndex((i) => (i + 1) % media.length);
-  const goPrev = () => setCurrentIndex((i) => (i - 1 + media.length) % media.length);
+  const totalSlides = slides.length;
+  const goNext = () => setCurrentIndex((i) => (i + 1) % totalSlides);
+  const goPrev = () => setCurrentIndex((i) => (i - 1 + totalSlides) % totalSlides);
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50;
 
   const onTouchStart = (e: React.TouchEvent) => {
-    // Don't track swipe on video controls
-    if ((e.target as HTMLElement).closest('video')) return;
+    if ((e.target as HTMLElement).closest('video') || (e.target as HTMLElement).closest('iframe')) return;
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
     setIsDragging(true);
@@ -578,12 +592,8 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
 
-    if (isLeftSwipe && media.length > 1) {
-      goNext();
-    }
-    if (isRightSwipe && media.length > 1) {
-      goPrev();
-    }
+    if (isLeftSwipe && totalSlides > 1) goNext();
+    if (isRightSwipe && totalSlides > 1) goPrev();
 
     setIsDragging(false);
     setDragOffset(0);
@@ -592,15 +602,27 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
   };
 
   const handleMediaClick = (e: React.MouseEvent) => {
-    // Don't open lightbox if clicking video controls
-    if ((e.target as HTMLElement).closest('video')) return;
-    setShowLightbox(true);
+    if ((e.target as HTMLElement).closest('video') || (e.target as HTMLElement).closest('iframe')) return;
+    const currentSlide = slides[currentIndex];
+    if (currentSlide.kind === "embed") return; // Don't lightbox embeds
+    // Find the index of this media item in lightboxMedia
+    const mediaIndex = uploadedMedia.indexOf(currentSlide.item);
+    if (mediaIndex >= 0) {
+      setShowLightbox(true);
+    }
+  };
+
+  // For lightbox, map current gallery index to lightbox media index
+  const getLightboxIndex = () => {
+    const currentSlide = slides[currentIndex];
+    if (currentSlide.kind !== "media") return 0;
+    return uploadedMedia.indexOf(currentSlide.item);
   };
 
   return (
     <>
       <div 
-        className="relative rounded-lg overflow-hidden mb-4 bg-slate-800 touch-pan-y cursor-zoom-in"
+        className={`relative rounded-lg overflow-hidden mb-4 bg-slate-800 touch-pan-y ${slides[currentIndex]?.kind === "media" ? "cursor-zoom-in" : ""}`}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -608,36 +630,42 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
       >
         {/* Preload all images in hidden container */}
         <div className="hidden">
-          {media.map((item, index) => 
-            item.type === "image" && index !== currentIndex ? (
+          {uploadedMedia.map((item, index) => 
+            item.type === "image" ? (
               <img key={item.url} src={item.url} alt="" />
             ) : null
           )}
         </div>
 
-        {/* Zoom hint icon */}
-        <div className="absolute top-3 right-3 z-10 w-8 h-8 bg-black/40 rounded-full flex items-center justify-center text-white/70 pointer-events-none">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-          </svg>
-        </div>
+        {/* Zoom hint icon - only for media slides */}
+        {slides[currentIndex]?.kind === "media" && (
+          <div className="absolute top-3 right-3 z-10 w-8 h-8 bg-black/40 rounded-full flex items-center justify-center text-white/70 pointer-events-none">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+            </svg>
+          </div>
+        )}
 
-        {/* All media items rendered, only current one visible */}
+        {/* All slides rendered, only current one visible */}
         <div className="relative">
-          {media.map((item, index) => (
+          {slides.map((slide, index) => (
             <div
-              key={item.url}
+              key={slide.kind === "embed" ? `embed-${slide.url}` : `media-${slide.item.url}`}
               className={`${index === currentIndex ? 'block' : 'hidden'} transition-transform duration-200 ease-out`}
               style={{ 
-                transform: isDragging && media.length > 1 && index === currentIndex 
+                transform: isDragging && totalSlides > 1 && index === currentIndex 
                   ? `translateX(${dragOffset * 0.3}px)` 
                   : 'translateX(0)',
                 opacity: isDragging && index === currentIndex ? 0.9 : 1
               }}
             >
-              {item.type === "video" ? (
+              {slide.kind === "embed" ? (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <ExternalLinkEmbed url={slide.url} />
+                </div>
+              ) : slide.item.type === "video" ? (
                 <video
-                  src={`${item.url}#t=0.1`}
+                  src={`${slide.item.url}#t=0.1`}
                   controls
                   preload="metadata"
                   className="w-full h-auto"
@@ -645,7 +673,7 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
                 />
               ) : (
                 <img
-                  src={item.url}
+                  src={slide.item.url}
                   alt={`Media ${index + 1}`}
                   className="w-full h-auto select-none"
                   draggable={false}
@@ -656,12 +684,12 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
           ))}
         </div>
 
-        {/* Navigation Arrows - hidden on mobile (md:flex), visible on desktop */}
-        {media.length > 1 && (
+        {/* Navigation Arrows */}
+        {totalSlides > 1 && (
           <>
             <button
               onClick={(e) => { e.stopPropagation(); goPrev(); }}
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full hidden md:flex items-center justify-center text-white transition-colors"
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full hidden md:flex items-center justify-center text-white transition-colors z-20"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -669,7 +697,7 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); goNext(); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full hidden md:flex items-center justify-center text-white transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full hidden md:flex items-center justify-center text-white transition-colors z-20"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -678,10 +706,10 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
           </>
         )}
 
-        {/* Dots Indicator (only show if multiple media) */}
-        {media.length > 1 && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-            {media.map((_, index) => (
+        {/* Dots Indicator */}
+        {totalSlides > 1 && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+            {slides.map((slide, index) => (
               <button
                 key={index}
                 onClick={(e) => { e.stopPropagation(); setCurrentIndex(index); }}
@@ -694,20 +722,24 @@ function MediaGallery({ mediaUrls, imageUrl }: { mediaUrls?: MediaItem[] | null;
       )}
 
       {/* Counter badge */}
-      {media.length > 1 && (
-        <div className="absolute top-3 left-3 bg-black/60 px-2 py-1 rounded-full text-xs text-white">
-          {currentIndex + 1} / {media.length}
+      {totalSlides > 1 && (
+        <div className="absolute top-3 left-3 bg-black/60 px-2 py-1 rounded-full text-xs text-white z-20">
+          {currentIndex + 1} / {totalSlides}
         </div>
       )}
     </div>
 
-    {/* Lightbox */}
-    {showLightbox && (
+    {/* Lightbox - only for uploaded media */}
+    {showLightbox && lightboxMedia.length > 0 && (
       <MediaLightbox
-        media={media}
-        currentIndex={currentIndex}
+        media={lightboxMedia}
+        currentIndex={getLightboxIndex()}
         onClose={() => setShowLightbox(false)}
-        onNavigate={(index) => setCurrentIndex(index)}
+        onNavigate={(index) => {
+          // Map lightbox index back to gallery slide index
+          const embedCount = linkUrl ? 1 : 0;
+          setCurrentIndex(index + embedCount);
+        }}
       />
     )}
     </>
@@ -1220,11 +1252,8 @@ export function FeedPost({
           </div>
         )}
 
-        {/* Media Gallery */}
-        <MediaGallery mediaUrls={mediaUrls} imageUrl={imageUrl} />
-
-        {/* External Link Embed */}
-        {linkUrl && <ExternalLinkEmbed url={linkUrl} />}
+        {/* Media Gallery (includes external link embeds as first slide) */}
+        <MediaGallery mediaUrls={mediaUrls} imageUrl={imageUrl} linkUrl={linkUrl} />
       </div>
 
       {/* Reactions & Comments Summary */}
