@@ -109,6 +109,14 @@ export function MobileMenu({ isLoggedIn, userAvatar, userName, userRole }: Mobil
                     <span className="text-slate-200">My Activity</span>
                   </Link>
                   <Link
+                    href="/messages"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    <span className="text-xl">💬</span>
+                    <span className="text-slate-200">Messages</span>
+                  </Link>
+                  <Link
                     href="/notifications"
                     onClick={() => setIsOpen(false)}
                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 transition-colors"

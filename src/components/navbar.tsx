@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { getUnreadNotificationsCount } from "@/actions/notifications";
+import { getUnreadMessageCount } from "@/actions/messages";
 import { Button } from "./ui/button";
 import { NotificationsDropdown } from "./notifications-dropdown";
 import { MobileMenu } from "./mobile-menu";
 
 export async function Navbar() {
   const user = await getCurrentUser();
-  const unreadCount = user ? await getUnreadNotificationsCount() : 0;
+  const [unreadCount, unreadMessages] = user
+    ? await Promise.all([getUnreadNotificationsCount(), getUnreadMessageCount()])
+    : [0, 0];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-lg border-b border-slate-800">
@@ -65,6 +68,19 @@ export async function Navbar() {
                   </Link>
                 )}
                 <div className="flex items-center space-x-3">
+                  <Link
+                    href="/messages"
+                    className="relative p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    {unreadMessages > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 min-w-[18px] bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                        {unreadMessages > 9 ? "9+" : unreadMessages}
+                      </span>
+                    )}
+                  </Link>
                   <NotificationsDropdown initialCount={unreadCount} />
                   <Link
                     href="/profile"
@@ -95,9 +111,24 @@ export async function Navbar() {
           </div>
 
           {/* Mobile Navigation */}
-          <div className="flex items-center gap-2 md:hidden">
+          <div className="flex items-center gap-1 md:hidden">
             {user && (
-              <NotificationsDropdown initialCount={unreadCount} />
+              <>
+                <Link
+                  href="/messages"
+                  className="relative p-2 text-slate-400 hover:text-white transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                      {unreadMessages > 9 ? "9+" : unreadMessages}
+                    </span>
+                  )}
+                </Link>
+                <NotificationsDropdown initialCount={unreadCount} />
+              </>
             )}
             <MobileMenu
               isLoggedIn={!!user}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { submitFeedback, type FeedbackType } from "@/actions/feedback";
@@ -13,6 +14,7 @@ const FEEDBACK_TYPES: { value: FeedbackType; label: string; emoji: string }[] = 
 ];
 
 export function FeedbackButton() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [type, setType] = useState<FeedbackType>("feature");
   const [title, setTitle] = useState("");
@@ -54,6 +56,11 @@ export function FeedbackButton() {
       // Keep form data if not submitted
     }
   };
+
+  // Hide on chat pages to avoid overlapping the message input
+  if (pathname.startsWith("/messages/") && pathname !== "/messages/") {
+    return null;
+  }
 
   return (
     <>
