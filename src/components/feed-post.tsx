@@ -7,6 +7,7 @@ import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { toggleReaction, type ReactionType } from "@/actions/reactions";
 import { createComment, deleteComment, getPostComments, toggleCommentLike } from "@/actions/comments";
+import { resolveStravaAppLink } from "@/actions/feed";
 import { getEarnedBadges } from "@/lib/badges";
 import { CheckinModal } from "./checkin-modal";
 import { ChallengeType, ChallengeUnit } from "@/lib/types";
@@ -108,6 +109,14 @@ function getStravaActivityId(url: string): string | null {
   }
 }
 
+function isStravaAppLink(url: string): boolean {
+  try {
+    return new URL(url).hostname.includes("strava.app.link");
+  } catch {
+    return false;
+  }
+}
+
 function StravaEmbed({ activityId, url }: { activityId: string; url: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -160,6 +169,61 @@ function StravaEmbed({ activityId, url }: { activityId: string; url: string }) {
   );
 }
 
+function StravaAppLinkEmbed({ url }: { url: string }) {
+  const [resolvedId, setResolvedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    resolveStravaAppLink(url).then((resolved) => {
+      if (resolved) {
+        const match = resolved.match(/\/activities\/(\d+)/);
+        if (match) {
+          setResolvedId(match[1]);
+        }
+      }
+      setLoading(false);
+    });
+  }, [url]);
+
+  if (loading) {
+    return (
+      <div className="mb-4 rounded-xl border border-slate-700 bg-slate-800/50 p-4 flex items-center gap-3">
+        <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <span className="text-sm text-slate-400">Loading Strava activity...</span>
+      </div>
+    );
+  }
+
+  if (resolvedId) {
+    return <StravaEmbed activityId={resolvedId} url={url} />;
+  }
+
+  // Couldn't resolve — show a branded Strava link card
+  return <StravaLinkCard url={url} />;
+}
+
+function StravaLinkCard({ url }: { url: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-3 mb-4 px-4 py-3 rounded-xl border border-orange-500/30 bg-orange-500/5 hover:bg-orange-500/10 transition-colors group"
+    >
+      <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+        <span className="text-xl">🏃</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-orange-400 group-hover:text-orange-300">Strava Activity</p>
+        <p className="text-xs text-slate-500 truncate">{url}</p>
+      </div>
+      <svg className="w-4 h-4 text-orange-400/60 group-hover:text-orange-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+      </svg>
+    </a>
+  );
+}
+
 function ExternalLinkEmbed({ url }: { url: string }) {
   const youtubeId = getYouTubeVideoId(url);
   const stravaId = getStravaActivityId(url);
@@ -182,6 +246,10 @@ function ExternalLinkEmbed({ url }: { url: string }) {
 
   if (stravaId) {
     return <StravaEmbed activityId={stravaId} url={url} />;
+  }
+
+  if (isStravaAppLink(url)) {
+    return <StravaAppLinkEmbed url={url} />;
   }
 
   // Fallback: plain link card

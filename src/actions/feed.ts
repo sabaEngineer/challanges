@@ -574,3 +574,28 @@ export async function getSinglePost(postId: string) {
   };
 }
 
+export async function resolveStravaAppLink(url: string): Promise<string | null> {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname.includes("strava.app.link")) return null;
+
+    const res = await fetch(url, { redirect: "manual" });
+    const location = res.headers.get("location");
+    if (location && location.includes("strava.com/activities/")) {
+      return location;
+    }
+
+    // Some redirects go through multiple hops; try following one more
+    if (location) {
+      const res2 = await fetch(location, { redirect: "manual" });
+      const location2 = res2.headers.get("location");
+      if (location2 && location2.includes("strava.com/activities/")) {
+        return location2;
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}

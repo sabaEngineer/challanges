@@ -21,7 +21,8 @@ function isValidLinkUrl(url: string): boolean {
     return (
       host.includes("youtube.com") ||
       host.includes("youtu.be") ||
-      host.includes("strava.com")
+      host.includes("strava.com") ||
+      host.includes("strava.app.link")
     );
   } catch {
     return false;
@@ -34,7 +35,7 @@ function getLinkType(url: string): "youtube" | "strava" | null {
     const parsed = new URL(url);
     const host = parsed.hostname.toLowerCase();
     if (host.includes("youtube.com") || host.includes("youtu.be")) return "youtube";
-    if (host.includes("strava.com")) return "strava";
+    if (host.includes("strava.com") || host.includes("strava.app.link")) return "strava";
     return null;
   } catch {
     return null;
