@@ -599,3 +599,48 @@ export async function resolveStravaAppLink(url: string): Promise<string | null> 
     return null;
   }
 }
+
+export async function getPostMetadata(postId: string) {
+  const checkin = await db.dailyCheckin.findUnique({
+    where: { id: postId },
+    select: {
+      note: true,
+      imageUrl: true,
+      mediaUrls: true,
+      user: {
+        select: {
+          fullName: true,
+          username: true,
+          avatarUrl: true,
+        },
+      },
+      challenge: {
+        select: {
+          title: true,
+          imageUrl: true,
+        },
+      },
+    },
+  });
+
+  if (!checkin) return null;
+
+  const userName = checkin.user.username
+    ? `@${checkin.user.username}`
+    : checkin.user.fullName || "Someone";
+
+  const mediaArray = checkin.mediaUrls as { url: string; type: string }[] | null;
+  const previewImage =
+    mediaArray?.find((m) => m.type === "image")?.url ||
+    checkin.imageUrl ||
+    checkin.challenge.imageUrl ||
+    checkin.user.avatarUrl ||
+    null;
+
+  return {
+    userName,
+    challengeTitle: checkin.challenge.title,
+    note: checkin.note,
+    previewImage,
+  };
+}

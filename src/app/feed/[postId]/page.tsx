@@ -1,12 +1,49 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
-import { getSinglePost } from "@/actions/feed";
+import { getSinglePost, getPostMetadata } from "@/actions/feed";
 import { FeedPost } from "@/components/feed-post";
 import { BackButton } from "@/components/back-button";
 
 interface PostPageProps {
   params: Promise<{ postId: string }>;
+}
+
+export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
+  const { postId } = await params;
+  const meta = await getPostMetadata(postId);
+
+  if (!meta) {
+    return {
+      title: "Post | Challanges",
+      description: "Check out this post on Challanges",
+    };
+  }
+
+  const title = `${meta.userName} — ${meta.challengeTitle} | Challanges`;
+  const description = meta.note
+    ? meta.note.slice(0, 200)
+    : `${meta.userName} checked in for ${meta.challengeTitle}`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      ...(meta.previewImage && {
+        images: [{ url: meta.previewImage, width: 1200, height: 630 }],
+      }),
+    },
+    twitter: {
+      card: meta.previewImage ? "summary_large_image" : "summary",
+      title,
+      description,
+      ...(meta.previewImage && { images: [meta.previewImage] }),
+    },
+  };
 }
 
 export default async function PostPage({ params }: PostPageProps) {

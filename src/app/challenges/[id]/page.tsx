@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getUserMembershipStatus } from "@/actions/members";
@@ -24,6 +25,47 @@ export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const challenge = await db.challenge.findUnique({
+    where: { id },
+    select: {
+      title: true,
+      description: true,
+      imageUrl: true,
+      _count: { select: { members: { where: { status: "active" } } } },
+    },
+  });
+
+  if (!challenge) {
+    return { title: "Challenge | Challanges" };
+  }
+
+  const title = `${challenge.title} | Challanges`;
+  const description = challenge.description
+    ? challenge.description.slice(0, 200)
+    : `Join "${challenge.title}" — ${challenge._count.members} member${challenge._count.members !== 1 ? "s" : ""} already participating!`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      ...(challenge.imageUrl && {
+        images: [{ url: challenge.imageUrl, width: 1200, height: 630 }],
+      }),
+    },
+    twitter: {
+      card: challenge.imageUrl ? "summary_large_image" : "summary",
+      title,
+      description,
+      ...(challenge.imageUrl && { images: [challenge.imageUrl] }),
+    },
+  };
 }
 
 export default async function ChallengePage({ params }: PageProps) {

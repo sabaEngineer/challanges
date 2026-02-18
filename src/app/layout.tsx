@@ -16,6 +16,18 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "Challanges - Build Better Habits",
   description: "Create and join challenges, build streaks, and compete with others",
+  metadataBase: new URL(process.env.NEXTAUTH_URL || "https://challanges.vercel.app"),
+  openGraph: {
+    title: "Challanges - Build Better Habits",
+    description: "Create and join challenges, build streaks, and compete with others",
+    type: "website",
+    siteName: "Challanges",
+  },
+  twitter: {
+    card: "summary",
+    title: "Challanges - Build Better Habits",
+    description: "Create and join challenges, build streaks, and compete with others",
+  },
 };
 
 export default function RootLayout({
