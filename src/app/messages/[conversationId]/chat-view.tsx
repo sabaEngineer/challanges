@@ -22,6 +22,7 @@ interface MessageData {
   };
   isOwn: boolean;
   createdAt: Date;
+  status?: "sending" | "sent" | "failed";
 }
 
 interface ChatViewProps {
@@ -102,22 +103,42 @@ export function ChatView({ conversationId, currentUserId, otherUser }: ChatViewP
     markConversationRead(conversationId);
   }, [conversationId, loadMessages]);
 
+  // Lock body scroll so page behind the chat doesn't scroll
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
+    document.body.style.height = "100%";
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.width = "";
+      document.body.style.height = "";
+    };
+  }, []);
+
   // Scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom("instant");
   }, [messages, scrollToBottom]);
 
-  // Poll for new messages
+  // Poll for new messages (preserve optimistic messages that are still sending)
   useEffect(() => {
     const interval = setInterval(async () => {
       const result = await getMessages(conversationId);
       if (result.success && "messages" in result) {
         setMessages((prev) => {
-          if (result.messages.length !== prev.length) {
+          const pendingMsgs = prev.filter((m) => m.id.startsWith("temp-"));
+          const serverIds = new Set(result.messages.map((m) => m.id));
+          const realCount = prev.filter((m) => !m.id.startsWith("temp-")).length;
+
+          if (result.messages.length !== realCount || result.messages.length > realCount) {
             markConversationRead(conversationId);
-            return result.messages;
           }
-          return prev;
+
+          // Keep pending optimistic messages that haven't been confirmed yet
+          const stillPending = pendingMsgs.filter((m) => m.status === "sending");
+          return [...result.messages, ...stillPending];
         });
       }
     }, 3000);
@@ -142,12 +163,35 @@ export function ChatView({ conversationId, currentUserId, otherUser }: ChatViewP
     const text = newMessage.trim();
     if (!text || sending) return;
 
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg: MessageData = {
+      id: tempId,
+      content: text,
+      mediaUrls: null,
+      sender: {
+        id: currentUserId,
+        fullName: null,
+        username: null,
+        avatarUrl: null,
+      },
+      isOwn: true,
+      createdAt: new Date(),
+      status: "sending",
+    };
+
     setNewMessage("");
+    setMessages((prev) => [...prev, optimisticMsg]);
     setSending(true);
 
     const result = await sendMessage(conversationId, text);
     if (result.success && "message" in result) {
-      setMessages((prev) => [...prev, result.message]);
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...result.message, status: "sent" as const } : m))
+      );
+    } else {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...m, status: "failed" as const } : m))
+      );
     }
 
     setSending(false);
@@ -175,9 +219,32 @@ export function ChatView({ conversationId, currentUserId, otherUser }: ChatViewP
         continue;
       }
 
+      const tempId = `temp-media-${Date.now()}`;
+      const localUrl = URL.createObjectURL(file);
+      const optimisticMsg: MessageData = {
+        id: tempId,
+        content: null,
+        mediaUrls: [{ url: localUrl, type: isVideo ? "video" : "image" }],
+        sender: {
+          id: currentUserId,
+          fullName: null,
+          username: null,
+          avatarUrl: null,
+        },
+        isOwn: true,
+        createdAt: new Date(),
+        status: "sending",
+      };
+      setMessages((prev) => [...prev, optimisticMsg]);
+
       try {
         const result = await getUploadUrl(file.type, "messages");
-        if (!result.success || !result.presignedUrl || !result.objectUrl) continue;
+        if (!result.success || !result.presignedUrl || !result.objectUrl) {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === tempId ? { ...m, status: "failed" as const } : m))
+          );
+          continue;
+        }
 
         await fetch(result.presignedUrl, {
           method: "PUT",
@@ -192,10 +259,19 @@ export function ChatView({ conversationId, currentUserId, otherUser }: ChatViewP
 
         const sendResult = await sendMessage(conversationId, undefined, [mediaItem]);
         if (sendResult.success && "message" in sendResult) {
-          setMessages((prev) => [...prev, sendResult.message]);
+          setMessages((prev) =>
+            prev.map((m) => (m.id === tempId ? { ...sendResult.message, status: "sent" as const } : m))
+          );
+        } else {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === tempId ? { ...m, status: "failed" as const } : m))
+          );
         }
       } catch (err) {
         console.error("Upload failed:", err);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? { ...m, status: "failed" as const } : m))
+        );
       }
     }
 
@@ -216,10 +292,36 @@ export function ChatView({ conversationId, currentUserId, otherUser }: ChatViewP
     }
   }
 
+  // Handle mobile keyboard: adjust bottom offset so input stays above keyboard
+  const chatRef = useRef<HTMLDivElement>(null);
+  const [bottomOffset, setBottomOffset] = useState(0);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const update = () => {
+      const keyboardHeight = window.innerHeight - vv.height - vv.offsetTop;
+      setBottomOffset(Math.max(0, keyboardHeight));
+      setTimeout(() => scrollToBottom("instant"), 50);
+    };
+
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [scrollToBottom]);
+
   return (
-    <div className="fixed inset-0 top-14 sm:top-16 flex flex-col bg-slate-950">
+    <div
+      ref={chatRef}
+      className="fixed inset-x-0 top-14 sm:top-16 flex flex-col bg-slate-950 z-40 overflow-hidden"
+      style={{ bottom: `${bottomOffset}px` }}
+    >
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800 bg-slate-950/80 backdrop-blur-lg">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800 bg-slate-950 flex-shrink-0 z-10">
         <Link
           href="/messages"
           className="p-1.5 -ml-1.5 rounded-lg hover:bg-slate-800 transition-colors"
@@ -253,7 +355,7 @@ export function ChatView({ conversationId, currentUserId, otherUser }: ChatViewP
       </div>
 
       {/* Messages */}
-      <div ref={containerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
+      <div ref={containerRef} className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-1 min-h-0">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
@@ -333,7 +435,7 @@ export function ChatView({ conversationId, currentUserId, otherUser }: ChatViewP
                         <div
                           className={`px-3.5 py-2 rounded-2xl text-sm break-words ${
                             msg.isOwn
-                              ? "bg-amber-500 text-white rounded-br-md"
+                              ? `bg-amber-500 text-white rounded-br-md ${msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "failed" ? "opacity-50" : ""}`
                               : "bg-slate-800 text-slate-200 rounded-bl-md"
                           }`}
                         >
@@ -341,11 +443,24 @@ export function ChatView({ conversationId, currentUserId, otherUser }: ChatViewP
                         </div>
                       )}
 
-                      {/* Time */}
+                      {/* Time & Status */}
                       {!isConsecutive && (
-                        <p className={`text-[10px] text-slate-600 mt-1 ${msg.isOwn ? "text-right" : "text-left"}`}>
-                          {formatMessageTime(msg.createdAt)}
-                        </p>
+                        <div className={`flex items-center gap-1 mt-1 ${msg.isOwn ? "justify-end" : "justify-start"}`}>
+                          <span className="text-[10px] text-slate-600">
+                            {formatMessageTime(msg.createdAt)}
+                          </span>
+                          {msg.isOwn && msg.status === "sending" && (
+                            <span className="text-[10px] text-amber-400/70">Sending...</span>
+                          )}
+                          {msg.isOwn && msg.status === "failed" && (
+                            <span className="text-[10px] text-red-400">Failed</span>
+                          )}
+                          {msg.isOwn && (msg.status === "sent" || !msg.status) && (
+                            <svg className="w-3 h-3 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -358,7 +473,7 @@ export function ChatView({ conversationId, currentUserId, otherUser }: ChatViewP
       </div>
 
       {/* Input area */}
-      <div className="border-t border-slate-800 bg-slate-950/80 backdrop-blur-lg px-3 py-2 safe-area-bottom">
+      <div className="border-t border-slate-800 bg-slate-950 px-3 py-2 flex-shrink-0 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         <div className="flex items-end gap-2">
           {/* Media upload */}
           <button
@@ -393,7 +508,7 @@ export function ChatView({ conversationId, currentUserId, otherUser }: ChatViewP
             </button>
 
             {showEmoji && (
-              <div className="absolute bottom-12 left-0 bg-slate-800 border border-slate-700 rounded-xl shadow-xl p-3 w-72 z-50">
+              <div className="absolute bottom-12 left-0 sm:left-0 bg-slate-800 border border-slate-700 rounded-xl shadow-xl p-3 w-[min(18rem,calc(100vw-2rem))] z-50 max-h-48 overflow-y-auto">
                 <div className="grid grid-cols-8 gap-1">
                   {EMOJI_LIST.map((emoji) => (
                     <button
@@ -402,7 +517,7 @@ export function ChatView({ conversationId, currentUserId, otherUser }: ChatViewP
                         setNewMessage((prev) => prev + emoji);
                         inputRef.current?.focus();
                       }}
-                      className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-700 transition-colors text-lg"
+                      className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-700 active:bg-slate-600 transition-colors text-lg"
                     >
                       {emoji}
                     </button>
@@ -419,7 +534,7 @@ export function ChatView({ conversationId, currentUserId, otherUser }: ChatViewP
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Message..."
-            className="flex-1 bg-slate-800 border border-slate-700 rounded-full px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition-colors"
+            className="flex-1 bg-slate-800 border border-slate-700 rounded-full px-4 py-2.5 text-[16px] sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition-colors"
           />
 
           {/* Send button */}

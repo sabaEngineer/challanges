@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { sendPushNotification } from "@/lib/firebase-admin";
 
 interface MediaItem {
   url: string;
@@ -226,6 +227,39 @@ export async function sendMessage(
     },
     data: { lastReadAt: new Date() },
   });
+
+  // Send push notification to the other participant
+  try {
+    const otherParticipant = await db.conversationParticipant.findFirst({
+      where: { conversationId, userId: { not: user.id } },
+      select: {
+        user: {
+          select: {
+            pushToken: true,
+            pushNotificationsEnabled: true,
+          },
+        },
+      },
+    });
+
+    if (otherParticipant?.user?.pushNotificationsEnabled && otherParticipant.user.pushToken) {
+      const senderName = message.sender.fullName || message.sender.username || "Someone";
+      const body = content?.trim()
+        ? content.trim().length > 100
+          ? content.trim().slice(0, 100) + "…"
+          : content.trim()
+        : "📎 Sent media";
+
+      await sendPushNotification(
+        otherParticipant.user.pushToken,
+        senderName,
+        body,
+        { url: `/messages/${conversationId}` }
+      );
+    }
+  } catch (error) {
+    console.error("Failed to send message push notification:", error);
+  }
 
   revalidatePath("/messages");
 

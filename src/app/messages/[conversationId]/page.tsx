@@ -18,10 +18,12 @@ export default async function ConversationPage({ params }: PageProps) {
   if (!info) notFound();
 
   return (
-    <ChatView
-      conversationId={info.id}
-      currentUserId={user.id}
-      otherUser={info.otherUser!}
-    />
+    <div className="-mt-16">
+      <ChatView
+        conversationId={info.id}
+        currentUserId={user.id}
+        otherUser={info.otherUser!}
+      />
+    </div>
   );
 }
