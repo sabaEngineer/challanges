@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createOrUpdateCheckin, checkDailyShareLimit } from "@/actions/checkins";
+import { createOrUpdateCheckin } from "@/actions/checkins";
 import { Button } from "./ui/button";
 import { Toast } from "./ui/toast";
 import { MultiMediaUpload, MediaItem } from "./media-upload";
@@ -292,23 +292,8 @@ export function CheckinModal({
     onClose();
   };
 
-  // Handle share toggle with daily limit check
-  const handleShareToggle = async (checked: boolean) => {
-    // If turning off, just allow it
-    if (!checked) {
-      setShareToFeed(false);
-      return;
-    }
-
-    // If turning on, check the daily limit first
-    const result = await checkDailyShareLimit(challengeId, today);
-    
-    if (!result.canShare) {
-      setErrorMessage("Daily share limit reached! You can only share 2 check-ins to the feed per day.");
-      setShareToFeed(false);
-    } else {
-      setShareToFeed(true);
-    }
+  const handleShareToggle = (checked: boolean) => {
+    setShareToFeed(checked);
   };
 
   // Check if done using group OR logic
