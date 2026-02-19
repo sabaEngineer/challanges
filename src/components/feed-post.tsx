@@ -509,6 +509,11 @@ type GallerySlide =
   | { kind: "media"; item: MediaItem }
   | { kind: "embed"; url: string };
 
+// Check if a link is a full embeddable link (YouTube or Strava web link)
+function isEmbeddableLink(url: string): boolean {
+  return !!getYouTubeVideoId(url) || !!getStravaActivityId(url);
+}
+
 // Media Gallery Component with swipe support for mobile and preloading
 function MediaGallery({ mediaUrls, imageUrl, linkUrl }: { mediaUrls?: MediaItem[] | null; imageUrl: string | null; linkUrl?: string | null }) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -534,9 +539,12 @@ function MediaGallery({ mediaUrls, imageUrl, linkUrl }: { mediaUrls?: MediaItem[
     return [];
   })();
 
-  // Build combined slides: external embed first, then uploaded media
+  // Only include fully embeddable links (YouTube, Strava web) in the carousel
+  // Strava app links will be shown separately below the gallery
+  const embeddableLinkUrl = linkUrl && isEmbeddableLink(linkUrl) ? linkUrl : null;
+
   const slides: GallerySlide[] = [
-    ...(linkUrl ? [{ kind: "embed" as const, url: linkUrl }] : []),
+    ...(embeddableLinkUrl ? [{ kind: "embed" as const, url: embeddableLinkUrl }] : []),
     ...uploadedMedia.map((item) => ({ kind: "media" as const, item })),
   ];
 
@@ -684,23 +692,25 @@ function MediaGallery({ mediaUrls, imageUrl, linkUrl }: { mediaUrls?: MediaItem[
           ))}
         </div>
 
-        {/* Navigation Arrows */}
+        {/* Navigation Arrows - visible on all screen sizes */}
         {totalSlides > 1 && (
           <>
             <button
               onClick={(e) => { e.stopPropagation(); goPrev(); }}
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full hidden md:flex items-center justify-center text-white transition-colors z-20"
+              onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); goPrev(); }}
+              className="absolute left-1.5 sm:left-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 bg-black/60 hover:bg-black/80 active:bg-black/90 active:scale-95 rounded-full flex items-center justify-center text-white/90 transition-all z-20 touch-manipulation"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); goNext(); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full hidden md:flex items-center justify-center text-white transition-colors z-20"
+              onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); goNext(); }}
+              className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 bg-black/60 hover:bg-black/80 active:bg-black/90 active:scale-95 rounded-full flex items-center justify-center text-white/90 transition-all z-20 touch-manipulation"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </button>
           </>
@@ -708,13 +718,15 @@ function MediaGallery({ mediaUrls, imageUrl, linkUrl }: { mediaUrls?: MediaItem[
 
         {/* Dots Indicator */}
         {totalSlides > 1 && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-20">
             {slides.map((slide, index) => (
               <button
                 key={index}
                 onClick={(e) => { e.stopPropagation(); setCurrentIndex(index); }}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  index === currentIndex ? "bg-white" : "bg-white/40"
+                className={`rounded-full transition-all ${
+                  index === currentIndex
+                    ? "w-6 h-2.5 bg-white"
+                    : "w-2.5 h-2.5 bg-white/40"
               }`}
             />
           ))}
@@ -723,7 +735,7 @@ function MediaGallery({ mediaUrls, imageUrl, linkUrl }: { mediaUrls?: MediaItem[
 
       {/* Counter badge */}
       {totalSlides > 1 && (
-        <div className="absolute top-3 left-3 bg-black/60 px-2 py-1 rounded-full text-xs text-white z-20">
+        <div className="absolute top-3 left-3 bg-black/60 px-2.5 py-1 rounded-full text-xs font-medium text-white z-20">
           {currentIndex + 1} / {totalSlides}
         </div>
       )}
@@ -737,7 +749,7 @@ function MediaGallery({ mediaUrls, imageUrl, linkUrl }: { mediaUrls?: MediaItem[
         onClose={() => setShowLightbox(false)}
         onNavigate={(index) => {
           // Map lightbox index back to gallery slide index
-          const embedCount = linkUrl ? 1 : 0;
+          const embedCount = embeddableLinkUrl ? 1 : 0;
           setCurrentIndex(index + embedCount);
         }}
       />
@@ -764,6 +776,8 @@ export function FeedPost({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showPostMenu, setShowPostMenu] = useState(false);
+  const postMenuRef = useRef<HTMLDivElement>(null);
   const [reactions, setReactions] = useState(initialReactions || {
     counts: { fire: 0, strong: 0, kudos: 0, not_bad: 0, heart: 0, smile: 0 },
     userReacted: [] as ReactionType[],
@@ -832,6 +846,23 @@ export function FeedPost({
       };
     }
   }, [showShareMenu]);
+
+  // Close post menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (postMenuRef.current && !postMenuRef.current.contains(event.target as Node)) {
+        setShowPostMenu(false);
+      }
+    };
+    if (showPostMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+        document.removeEventListener("touchstart", handleClickOutside);
+      };
+    }
+  }, [showPostMenu]);
   
   const insertEmoji = (emoji: string) => {
     setNewComment(prev => prev + emoji);
@@ -1133,17 +1164,9 @@ export function FeedPost({
               return null;
             })()}
             {isOwnPost && (
-              <>
-                <span className="ml-1.5 text-xs px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded">
-                  You
-                </span>
-                <button
-                  onClick={() => setShowEditModal(true)}
-                  className="ml-1.5 text-xs px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors"
-                >
-                  Edit
-                </button>
-              </>
+              <span className="ml-1.5 text-xs px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded">
+                You
+              </span>
             )}
             <span className="text-slate-400">
               {completedItems === totalItems 
@@ -1162,6 +1185,36 @@ export function FeedPost({
             {formatTimeAgo(createdAt)}
           </p>
         </div>
+
+        {/* Three-dot menu for own posts */}
+        {isOwnPost && (
+          <div className="relative flex-shrink-0" ref={postMenuRef}>
+            <button
+              onClick={() => setShowPostMenu(!showPostMenu)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+              </svg>
+            </button>
+            {showPostMenu && (
+              <div className="absolute right-0 top-full mt-1 z-50 w-44 bg-slate-800 border border-slate-700 rounded-xl shadow-xl overflow-hidden">
+                <button
+                  onClick={() => {
+                    setShowPostMenu(false);
+                    setShowEditModal(true);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-200 hover:bg-slate-700 transition-colors text-left"
+                >
+                  <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit Check-in
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Post Content */}
@@ -1252,8 +1305,30 @@ export function FeedPost({
           </div>
         )}
 
-        {/* Media Gallery (includes external link embeds as first slide) */}
+        {/* Media Gallery (YouTube & Strava web embeds in carousel with photos/videos) */}
         <MediaGallery mediaUrls={mediaUrls} imageUrl={imageUrl} linkUrl={linkUrl} />
+
+        {/* Strava app link shown below media if it's not a full web embed */}
+        {linkUrl && !isEmbeddableLink(linkUrl) && (
+          <div className="mb-4">
+            {isStravaAppLink(linkUrl) ? (
+              <StravaAppLinkEmbed url={linkUrl} />
+            ) : (
+              <a
+                href={linkUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-700 bg-slate-800/50 hover:bg-slate-800 transition-colors group"
+              >
+                <span className="text-lg">🔗</span>
+                <span className="text-sm text-slate-300 group-hover:text-white truncate flex-1">{linkUrl}</span>
+                <svg className="w-4 h-4 text-slate-500 group-hover:text-slate-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Reactions & Comments Summary */}
@@ -1671,6 +1746,8 @@ export function FeedPost({
           existingCheckin={{
             note: note,
             imageUrl: imageUrl,
+            mediaUrls: mediaUrls,
+            linkUrl: linkUrl,
             items: items.map(item => ({
               requirementId: item.requirement.id,
               value: item.value,
