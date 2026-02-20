@@ -158,10 +158,10 @@ export function NotificationsDropdown({ initialCount }: NotificationsDropdownPro
   function getNotificationLink(notification: Notification): { href: string; label: string } | null {
     const { type, checkinId, challengeId, bookId } = notification;
 
-    // Post-related notifications: link to the post if checkinId exists
+    // Post-related notifications: link to the post
     if (type === "new_comment" || type === "comment_reply" || type === "new_reaction") {
       if (checkinId) return { href: `/feed/${checkinId}`, label: "View Post →" };
-      if (challengeId) return { href: `/challenges/${challengeId}`, label: "View Challenge →" };
+      if (challengeId) return { href: `/feed/challenge/${challengeId}`, label: "View Post →" };
       return null;
     }
 

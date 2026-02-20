@@ -120,6 +120,85 @@ export async function getNewChallengesForFeed(limit: number = 10) {
   });
 }
 
+// Get a single challenge as a feed post (for the /feed/challenge/[id] page)
+export async function getSingleChallengePost(challengeId: string) {
+  const user = await getCurrentUser();
+
+  const challenge = await db.challenge.findUnique({
+    where: { id: challengeId },
+    include: {
+      creator: {
+        select: {
+          id: true,
+          fullName: true,
+          username: true,
+          avatarUrl: true,
+        },
+      },
+      requirements: true,
+      _count: {
+        select: {
+          members: { where: { status: "active" } },
+          comments: true,
+        },
+      },
+      reactions: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!challenge) return null;
+
+  const reactionCounts: Record<string, number> = { fire: 0, strong: 0, kudos: 0, not_bad: 0, heart: 0, smile: 0 };
+  const reactors: Record<string, ReactionUser[]> = { fire: [], strong: [], kudos: [], not_bad: [], heart: [], smile: [] };
+  const userReacted: string[] = [];
+
+  challenge.reactions.forEach((r) => {
+    reactionCounts[r.type]++;
+    reactors[r.type].push(r.user);
+    if (user && r.userId === user.id && !userReacted.includes(r.type)) {
+      userReacted.push(r.type);
+    }
+  });
+
+  return {
+    id: `challenge_${challenge.id}`,
+    challengeId: challenge.id,
+    title: challenge.title,
+    description: challenge.description,
+    imageUrl: challenge.imageUrl,
+    imagePosition: challenge.imagePosition,
+    startDate: challenge.startDate,
+    endDate: challenge.endDate,
+    createdAt: challenge.createdAt,
+    creator: challenge.creator,
+    memberCount: challenge._count.members,
+    commentCount: challenge._count.comments,
+    requirements: challenge.requirements.map((r) => ({
+      title: r.title,
+      type: r.type,
+      targetValue: r.targetValue ? Number(r.targetValue) : null,
+      unit: r.unit,
+    })),
+    isOwnChallenge: user?.id === challenge.createdBy,
+    reactions: {
+      counts: reactionCounts as Record<ReactionType, number>,
+      userReacted: userReacted as ReactionType[],
+      reactors: reactors as Record<ReactionType, ReactionUser[]>,
+    },
+  };
+}
+
 export async function getFeedPosts(limit: number = 20, offset: number = 0) {
   const user = await getCurrentUser();
 
