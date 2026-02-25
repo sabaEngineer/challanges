@@ -61,6 +61,7 @@ export function EditChallengeForm({ challenge }: EditChallengeFormProps) {
   );
   const [imageUrl, setImageUrl] = useState<string | null>(challenge.imageUrl);
   const [imagePosition, setImagePosition] = useState(challenge.imagePosition || "50% 50%");
+  const [endDate, setEndDate] = useState(challenge.endDate);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -211,35 +212,41 @@ export function EditChallengeForm({ challenge }: EditChallengeFormProps) {
             </div>
           </div>
 
-          {/* Dates - Read only info */}
+          {/* Dates */}
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-white border-b border-slate-700 pb-2">
               Duration
             </h3>
-            <div className="p-4 bg-slate-800/50 rounded-lg">
-              <p className="text-sm text-slate-400 mb-2">
-                Challenge dates cannot be modified after creation.
-              </p>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-xs text-slate-500">Start Date</div>
-                  <div className="text-white font-medium">
-                    {new Date(challenge.startDate).toLocaleDateString()}
-                  </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Start Date
+                </label>
+                <div className="px-4 py-3 rounded-lg bg-slate-900/30 border border-slate-700/50 text-slate-400 text-sm">
+                  {new Date(challenge.startDate).toLocaleDateString()}
                 </div>
-                <div>
-                  <div className="text-xs text-slate-500">End Date</div>
-                  <div className="text-white font-medium">
-                    {new Date(challenge.endDate).toLocaleDateString()}
-                  </div>
-                </div>
+                <p className="text-xs text-slate-500 mt-1">Start date cannot be changed</p>
               </div>
-              {isOneTime && (
-                <div className="mt-2 text-sm text-violet-400">
-                  📅 One-Time Challenge
-                </div>
-              )}
+              <div>
+                <label htmlFor="endDate" className="block text-sm font-medium text-slate-300 mb-1">
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  id="endDate"
+                  name="endDate"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={challenge.startDate}
+                  className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 [color-scheme:dark]"
+                />
+              </div>
             </div>
+            {challenge.startDate === endDate && (
+              <div className="text-sm text-violet-400">
+                📅 One-Time Challenge
+              </div>
+            )}
           </div>
 
           {/* Requirements */}

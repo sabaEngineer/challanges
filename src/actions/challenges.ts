@@ -194,6 +194,7 @@ export async function updateChallenge(
   const description = formData.get("description") as string;
   const imageUrl = formData.get("imageUrl") as string;
   const imagePosition = formData.get("imagePosition") as string;
+  const endDateStr = formData.get("endDate") as string;
 
   if (!id || !title) {
     return { success: false, error: "Please fill in all required fields" };
@@ -241,14 +242,23 @@ export async function updateChallenge(
   // Update challenge
   await db.$transaction(async (tx) => {
     // Update main challenge data
+    const updateData: Record<string, unknown> = {
+      title,
+      description: description || null,
+      imageUrl: imageUrl || null,
+      imagePosition: imagePosition || null,
+    };
+
+    if (endDateStr) {
+      const newEndDate = new Date(endDateStr + "T23:59:59.999Z");
+      if (newEndDate >= challenge.startDate) {
+        updateData.endDate = newEndDate;
+      }
+    }
+
     await tx.challenge.update({
       where: { id },
-      data: {
-        title,
-        description: description || null,
-        imageUrl: imageUrl || null,
-        imagePosition: imagePosition || null,
-      },
+      data: updateData,
     });
 
     // Delete removed requirements
